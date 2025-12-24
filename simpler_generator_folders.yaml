@@ -106,6 +106,7 @@ generate:
           - file: debouncer.dart
             code: |
               import 'dart:async';
+              import 'package:flutter/widgets.dart';
 
               /// Utility class to debounce function calls
               class Debouncer {
@@ -735,6 +736,7 @@ generate:
               import '../../domain/repositories/repository.dart';
               import '../datasources/local_data_source.dart';
               import '../datasources/remote_data_source.dart';
+              import '../models/model.dart';
 
               /// ModuleName repository implementation
               class ModuleNameRepositoryImpl implements ModuleNameRepository {
@@ -975,7 +977,7 @@ generate:
                 @override
                 Future<Either<Failure, Unit>> deleteItem(String id) async {
                   await Future.delayed(const Duration(milliseconds: 300));
-                  final removed = _fakeData.removeWhere((item) => item.id == id);
+                  _fakeData.removeWhere((item) => item.id == id);
                   return right(unit);
                 }
 
@@ -1011,7 +1013,6 @@ generate:
           import 'package:flutter_riverpod/flutter_riverpod.dart';
           import '../data/datasources/local_data_source.dart';
           import '../data/datasources/remote_data_source.dart';
-          import '../data/repositories/repository_impl.dart';
           import '../data/repositories/repository_impl_fake.dart';
           import '../domain/repositories/repository.dart';
           import '../domain/usecases/add.dart';
@@ -1146,7 +1147,6 @@ generate:
 
           - file: providers.dart
             code: |
-              import 'package:dartz/dartz.dart';
               import 'package:flutter_riverpod/flutter_riverpod.dart';
               import '../../core/errors/failures.dart';
               import '../../core/usecases/usecase.dart';
@@ -1273,10 +1273,8 @@ generate:
                   };
                 }
 
-                @override
                 void dispose() {
                   _debouncer.dispose();
-                  super.dispose();
                 }
               }
 
@@ -1315,7 +1313,7 @@ generate:
               /// Add item provider
               class AddModuleNameNotifier extends AsyncNotifier<void> with CrudMixin {
                 @override
-                Future<void> build() async {}
+                void build() {}
 
                 Future<void> addModuleName(ModuleNameEntity item) async {
                   await handleCrudOperation(
@@ -1328,7 +1326,7 @@ generate:
               /// Update item provider
               class UpdateModuleNameNotifier extends AsyncNotifier<void> with CrudMixin {
                 @override
-                Future<void> build() async {}
+                void build() {}
 
                 Future<void> updateModuleName(ModuleNameEntity item) async {
                   await handleCrudOperation(
@@ -1341,7 +1339,7 @@ generate:
               /// Delete item provider
               class DeleteModuleNameNotifier extends AsyncNotifier<void> with CrudMixin {
                 @override
-                Future<void> build() async {}
+                void build() {}
 
                 Future<void> deleteModuleName(String id) async {
                   await handleCrudOperation(
@@ -1353,7 +1351,6 @@ generate:
 
               /// Search provider
               class SearchModuleNameNotifier extends BaseListNotifier<ModuleNameEntity> {
-                String _query = '';
 
                 @override
                 Future<List<ModuleNameEntity>> build() async {
@@ -1361,7 +1358,6 @@ generate:
                 }
 
                 Future<void> search(String query) async {
-                  _query = query;
                   if (query.isEmpty) {
                     state = const AsyncValue.data([]);
                     return;
@@ -1379,7 +1375,6 @@ generate:
                 }
 
                 void clear() {
-                  _query = '';
                   state = const AsyncValue.data([]);
                 }
               }
@@ -1771,43 +1766,58 @@ generate:
                   AsyncValue? previous, 
                   AsyncValue next,
                 ) {
-                  // Show loading dialog
-                  if (next.isLoading && !previous!.isLoading) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => LoadingOverlay(message: loadingMessage),
-                    );
-                  }
-                  // Handle error
-                  else if (next.hasError && previous!.isLoading) {
-                    Navigator.of(context).pop(); // Close loading dialog
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(next.error.toString()),
-                        backgroundColor: Colors.red,
-                        behavior: SnackBarBehavior.floating,
-                        action: SnackBarAction(
-                          label: 'Dismiss',
-                          textColor: Colors.white,
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          },
+                  // Skip if this is the initial state (no previous state)
+                  if (previous == null) return;
+                  
+                  // Use addPostFrameCallback to defer UI operations until after build
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    // Check if context is still mounted
+                    if (!context.mounted) return;
+                    
+                    // Show loading dialog
+                    if (next.isLoading && !previous.isLoading) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => LoadingOverlay(message: loadingMessage),
+                      );
+                    }
+                    // Handle error
+                    else if (next.hasError && previous.isLoading) {
+                      // Safely pop dialog if navigation stack is not empty
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop(); // Close loading dialog
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(next.error.toString()),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                          action: SnackBarAction(
+                            label: 'Dismiss',
+                            textColor: Colors.white,
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            },
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                  // Handle success
-                  else if (next.hasValue && previous!.isLoading) {
-                    Navigator.of(context).pop(); // Close loading dialog
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(successMessage ?? 'Operation completed successfully'),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
+                      );
+                    }
+                    // Handle success
+                    else if (next.hasValue && previous.isLoading) {
+                      // Safely pop dialog if navigation stack is not empty
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop(); // Close loading dialog
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(successMessage ?? 'Operation completed successfully'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
                 }
               }
 
@@ -1838,31 +1848,46 @@ generate:
                   AsyncValue next,
                   CrudListenerConfig config,
                 ) {
-                  if (next.isLoading && !previous!.isLoading) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => LoadingOverlay(message: config.loadingMessage),
-                    );
-                  } else if (next.hasError && previous!.isLoading) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(config.errorMessage ?? next.error.toString()),
-                        backgroundColor: Colors.red,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  } else if (next.hasValue && previous!.isLoading) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(config.successMessage),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
+                  // Skip if this is the initial state (no previous state)
+                  if (previous == null) return;
+                  
+                  // Use addPostFrameCallback to defer UI operations until after build
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    // Check if context is still mounted
+                    if (!context.mounted) return;
+                    
+                    if (next.isLoading && !previous.isLoading) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => LoadingOverlay(message: config.loadingMessage),
+                      );
+                    } else if (next.hasError && previous.isLoading) {
+                      // Safely pop dialog if navigation stack is not empty
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(config.errorMessage ?? next.error.toString()),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else if (next.hasValue && previous.isLoading) {
+                      // Safely pop dialog if navigation stack is not empty
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(config.successMessage),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
                 }
               }
 
@@ -1893,6 +1918,7 @@ generate:
               import 'widgets/module_name_form_dialog.dart';
               import 'widgets/module_name_item_tile.dart';
               import 'widgets/module_name_search_delegate.dart';
+              import '../../domain/entities/paginated_response.dart';
 
               /// ModuleName list page with pagination
               class ModuleNameListPage extends ConsumerStatefulWidget {
@@ -1958,7 +1984,7 @@ generate:
                           ),
                           IconButton(
                             icon: const Icon(Icons.refresh),
-                            onPressed: () => ref.refresh(getAllModuleNamePaginatedProvider),
+                            onPressed: () => ref.invalidate(getAllModuleNamePaginatedProvider),
                           ),
                         ],
                         bottom: PreferredSize(
@@ -1998,7 +2024,7 @@ generate:
                       ),
                       body: RefreshIndicator(
                         onRefresh: () async {
-                          ref.refresh(getAllModuleNamePaginatedProvider);
+                          ref.invalidate(getAllModuleNamePaginatedProvider);
                         },
                         child: AsyncStateBuilder<PaginatedResponse<ModuleNameEntity>>(
                           state: paginatedState,
@@ -2188,13 +2214,13 @@ generate:
                         actions: [
                           IconButton(
                             icon: const Icon(Icons.refresh),
-                            onPressed: () => ref.refresh(getAllModuleNameProvider),
+                            onPressed: () => ref.invalidate(getAllModuleNameProvider),
                           ),
                         ],
                       ),
                       body: RefreshIndicator(
                         onRefresh: () async {
-                          ref.refresh(getAllModuleNameProvider);
+                          ref.invalidate(getAllModuleNameProvider);
                         },
                         child: AsyncStateBuilder<List<ModuleNameEntity>>(
                           state: listState,
@@ -2534,6 +2560,8 @@ generate:
 
                   /// Search delegate for ModuleName
                   class ModuleNameSearchDelegate extends SearchDelegate<ModuleNameEntity?> {
+                    String _lastQuery = '';
+
                     @override
                     List<Widget> buildActions(BuildContext context) {
                       return [
@@ -2541,6 +2569,7 @@ generate:
                           icon: const Icon(Icons.clear),
                           onPressed: () {
                             query = '';
+                            _lastQuery = '';
                             showSuggestions(context);
                           },
                         ),
@@ -2573,14 +2602,17 @@ generate:
                     Widget _buildSearchResults(BuildContext context) {
                       return Consumer(
                         builder: (context, ref, child) {
-                          // Trigger search when query changes
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (query.isNotEmpty) {
-                              ref.read(searchModuleNameProvider.notifier).search(query);
-                            } else {
-                              ref.read(searchModuleNameProvider.notifier).clear();
-                            }
-                          });
+                          // Only trigger search if query has actually changed
+                          if (query != _lastQuery) {
+                            _lastQuery = query;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (query.isNotEmpty) {
+                                ref.read(searchModuleNameProvider.notifier).search(query);
+                              } else {
+                                ref.read(searchModuleNameProvider.notifier).clear();
+                              }
+                            });
+                          }
 
                           final searchState = ref.watch(searchModuleNameProvider);
 
