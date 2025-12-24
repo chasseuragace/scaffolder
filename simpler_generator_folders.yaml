@@ -1,0 +1,2692 @@
+# **************************************************************************
+# * Ultimate Flutter Generator - Best of All Templates
+# * Combines the best features from all analyzed templates
+# **************************************************************************
+
+# Template Replacement Rules:
+# NAME -> Feature name (e.g., "User", "Product", "Order")
+# ModuleName -> PascalCase version of NAME
+# module_name -> snake_case version of NAME
+
+# Configuration flags (can be toggled)
+features:
+  pagination: true
+  forms: true
+  filters: true
+  preview: true
+  shimmer_loading: true
+  fake_repository: true
+  generic_base_classes: true
+  advanced_error_handling: true
+  asset_generation: false
+
+generate:
+  # ===== CORE LAYER =====
+  - category: core
+    contents:
+      - folder: errors
+        contents:
+          - file: failures.dart
+            code: |
+              // Base failure class
+              abstract class Failure {
+                const Failure();
+              }
+
+              // Network-related failures
+              class NetworkFailure extends Failure {
+                const NetworkFailure();
+              }
+
+              class ServerFailure extends Failure {
+                final String? message;
+                const ServerFailure([this.message]);
+              }
+
+              class TimeoutFailure extends Failure {
+                const TimeoutFailure();
+              }
+
+              // Data-related failures
+              class CacheFailure extends Failure {
+                const CacheFailure();
+              }
+
+              class ValidationFailure extends Failure {
+                final String message;
+                const ValidationFailure(this.message);
+              }
+
+              class NotFoundFailure extends Failure {
+                const NotFoundFailure();
+              }
+
+              // Permission-related failures
+              class UnauthorizedFailure extends Failure {
+                const UnauthorizedFailure();
+              }
+
+              class ForbiddenFailure extends Failure {
+                const ForbiddenFailure();
+              }
+
+              // Generic failure
+              class UnexpectedFailure extends Failure {
+                final String? message;
+                const UnexpectedFailure([this.message]);
+              }
+
+      - folder: usecases
+        contents:
+          - file: usecase.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../errors/failures.dart';
+
+              /// Base use case interface
+              abstract class UseCase<Type, Params> {
+                Future<Either<Failure, Type>> call(Params params);
+              }
+
+              /// Use case with no parameters
+              abstract class UseCaseNoParams<Type> {
+                Future<Either<Failure, Type>> call();
+              }
+
+              /// Parameters class for use cases that don't need parameters
+              class NoParams {
+                const NoParams();
+              }
+
+              /// Base repository interface
+              abstract class BaseRepository {}
+
+      - folder: utils
+        contents:
+          - file: debouncer.dart
+            code: |
+              import 'dart:async';
+
+              /// Utility class to debounce function calls
+              class Debouncer {
+                final Duration delay;
+                Timer? _timer;
+
+                Debouncer(this.delay);
+
+                void run(VoidCallback action) {
+                  _timer?.cancel();
+                  _timer = Timer(delay, action);
+                }
+
+                void dispose() {
+                  _timer?.cancel();
+                }
+              }
+
+  # ===== DOMAIN LAYER =====
+  - category: domain
+    contents:
+      - file: base_entity.dart
+        code: |
+          /// Base entity class that all domain entities extend
+          abstract class BaseEntity {
+            /// Raw JSON data for debugging and flexibility
+            final Map<String, dynamic>? rawJson;
+            
+            const BaseEntity({this.rawJson});
+
+            /// Unique identifier for the entity
+            String get id;
+
+            @override
+            bool operator ==(Object other) =>
+                identical(this, other) ||
+                other is BaseEntity &&
+                    runtimeType == other.runtimeType &&
+                    id == other.id;
+
+            @override
+            int get hashCode => id.hashCode;
+          }
+
+      - folder: entities
+        contents:
+          - file: entity.dart
+            code: |
+              import '../base_entity.dart';
+
+              /// ModuleName domain entity
+              class ModuleNameEntity extends BaseEntity {
+                @override
+                final String id;
+                final String? name;
+                final String? description;
+                final DateTime? createdAt;
+                final DateTime? updatedAt;
+
+                const ModuleNameEntity({
+                  required this.id,
+                  this.name,
+                  this.description,
+                  this.createdAt,
+                  this.updatedAt,
+                  super.rawJson,
+                });
+
+                /// Create a copy with updated fields
+                ModuleNameEntity copyWith({
+                  String? id,
+                  String? name,
+                  String? description,
+                  DateTime? createdAt,
+                  DateTime? updatedAt,
+                  Map<String, dynamic>? rawJson,
+                }) {
+                  return ModuleNameEntity(
+                    id: id ?? this.id,
+                    name: name ?? this.name,
+                    description: description ?? this.description,
+                    createdAt: createdAt ?? this.createdAt,
+                    updatedAt: updatedAt ?? this.updatedAt,
+                    rawJson: rawJson ?? this.rawJson,
+                  );
+                }
+
+                @override
+                String toString() => 'ModuleNameEntity(id: $id, name: $name)';
+              }
+
+          - file: pagination_params.dart
+            code: |
+              /// Parameters for paginated requests
+              class PaginationParams {
+                final int page;
+                final int limit;
+                final String? search;
+                final Map<String, dynamic>? filters;
+
+                const PaginationParams({
+                  required this.page,
+                  required this.limit,
+                  this.search,
+                  this.filters,
+                });
+
+                Map<String, dynamic> toJson() => {
+                  'page': page,
+                  'limit': limit,
+                  if (search != null) 'search': search,
+                  if (filters != null) ...filters!,
+                };
+              }
+
+          - file: paginated_response.dart
+            code: |
+              /// Generic paginated response wrapper
+              class PaginatedResponse<T> {
+                final List<T> items;
+                final bool hasMore;
+                final int totalPages;
+                final int currentPage;
+                final int totalItems;
+                final bool isPaginating;
+
+                const PaginatedResponse({
+                  required this.items,
+                  required this.hasMore,
+                  required this.totalPages,
+                  required this.currentPage,
+                  required this.totalItems,
+                  this.isPaginating = false,
+                });
+
+                /// Create a copy with updated fields
+                PaginatedResponse<T> copyWith({
+                  List<T>? items,
+                  bool? hasMore,
+                  int? totalPages,
+                  int? currentPage,
+                  int? totalItems,
+                  bool? isPaginating,
+                }) {
+                  return PaginatedResponse<T>(
+                    items: items ?? this.items,
+                    hasMore: hasMore ?? this.hasMore,
+                    totalPages: totalPages ?? this.totalPages,
+                    currentPage: currentPage ?? this.currentPage,
+                    totalItems: totalItems ?? this.totalItems,
+                    isPaginating: isPaginating ?? this.isPaginating,
+                  );
+                }
+              }
+
+      - folder: repositories
+        contents:
+          - file: repository.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../entities/entity.dart';
+              import '../entities/paginated_response.dart';
+              import '../entities/pagination_params.dart';
+
+              /// ModuleName repository interface
+              abstract class ModuleNameRepository {
+                /// Get all items (non-paginated)
+                Future<Either<Failure, List<ModuleNameEntity>>> getAllItems();
+
+                /// Get paginated items
+                Future<Either<Failure, PaginatedResponse<ModuleNameEntity>>> 
+                    getAllItemsPaginated(PaginationParams params);
+
+                /// Get item by ID
+                Future<Either<Failure, ModuleNameEntity?>> getItemById(String id);
+
+                /// Add new item
+                Future<Either<Failure, Unit>> addItem(ModuleNameEntity entity);
+
+                /// Update existing item
+                Future<Either<Failure, Unit>> updateItem(ModuleNameEntity entity);
+
+                /// Delete item by ID
+                Future<Either<Failure, Unit>> deleteItem(String id);
+
+                /// Search items
+                Future<Either<Failure, List<ModuleNameEntity>>> searchItems(String query);
+
+                /// Bulk operations
+                Future<Either<Failure, Unit>> addItems(List<ModuleNameEntity> entities);
+                Future<Either<Failure, Unit>> deleteItems(List<String> ids);
+              }
+
+      - folder: usecases
+        contents:
+          - file: get_all.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../entities/entity.dart';
+              import '../repositories/repository.dart';
+
+              class GetAllModuleNameUseCase implements UseCase<List<ModuleNameEntity>, NoParams> {
+                final ModuleNameRepository repository;
+
+                const GetAllModuleNameUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, List<ModuleNameEntity>>> call(NoParams params) async {
+                  return repository.getAllItems();
+                }
+              }
+
+          - file: get_all_paginated.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../entities/entity.dart';
+              import '../entities/paginated_response.dart';
+              import '../entities/pagination_params.dart';
+              import '../repositories/repository.dart';
+
+              class GetAllModuleNamePaginatedUseCase 
+                  implements UseCase<PaginatedResponse<ModuleNameEntity>, PaginationParams> {
+                final ModuleNameRepository repository;
+
+                const GetAllModuleNamePaginatedUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, PaginatedResponse<ModuleNameEntity>>> call(
+                    PaginationParams params) async {
+                  return repository.getAllItemsPaginated(params);
+                }
+              }
+
+          - file: get_by_id.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../entities/entity.dart';
+              import '../repositories/repository.dart';
+
+              class GetModuleNameByIdUseCase implements UseCase<ModuleNameEntity?, String> {
+                final ModuleNameRepository repository;
+
+                const GetModuleNameByIdUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, ModuleNameEntity?>> call(String id) async {
+                  return repository.getItemById(id);
+                }
+              }
+
+          - file: add.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../entities/entity.dart';
+              import '../repositories/repository.dart';
+
+              class AddModuleNameUseCase implements UseCase<Unit, ModuleNameEntity> {
+                final ModuleNameRepository repository;
+
+                const AddModuleNameUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, Unit>> call(ModuleNameEntity entity) async {
+                  return repository.addItem(entity);
+                }
+              }
+
+          - file: update.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../entities/entity.dart';
+              import '../repositories/repository.dart';
+
+              class UpdateModuleNameUseCase implements UseCase<Unit, ModuleNameEntity> {
+                final ModuleNameRepository repository;
+
+                const UpdateModuleNameUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, Unit>> call(ModuleNameEntity entity) async {
+                  return repository.updateItem(entity);
+                }
+              }
+
+          - file: delete.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../repositories/repository.dart';
+
+              class DeleteModuleNameUseCase implements UseCase<Unit, String> {
+                final ModuleNameRepository repository;
+
+                const DeleteModuleNameUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, Unit>> call(String id) async {
+                  return repository.deleteItem(id);
+                }
+              }
+
+          - file: search.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../entities/entity.dart';
+              import '../repositories/repository.dart';
+
+              class SearchModuleNameUseCase implements UseCase<List<ModuleNameEntity>, String> {
+                final ModuleNameRepository repository;
+
+                const SearchModuleNameUseCase(this.repository);
+
+                @override
+                Future<Either<Failure, List<ModuleNameEntity>>> call(String query) async {
+                  return repository.searchItems(query);
+                }
+              }
+
+  # ===== DATA LAYER =====
+  - category: data
+    contents:
+      - folder: models
+        contents:
+          - file: model.dart
+            code: |
+              import '../../domain/entities/entity.dart';
+
+              /// ModuleName data model
+              class ModuleNameModel extends ModuleNameEntity {
+                const ModuleNameModel({
+                  required super.id,
+                  super.name,
+                  super.description,
+                  super.createdAt,
+                  super.updatedAt,
+                  super.rawJson,
+                });
+
+                /// Create from JSON
+                factory ModuleNameModel.fromJson(Map<String, dynamic> json) {
+                  return ModuleNameModel(
+                    id: json['id'] as String,
+                    name: json['name'] as String?,
+                    description: json['description'] as String?,
+                    createdAt: json['created_at'] != null 
+                        ? DateTime.parse(json['created_at'] as String) 
+                        : null,
+                    updatedAt: json['updated_at'] != null 
+                        ? DateTime.parse(json['updated_at'] as String) 
+                        : null,
+                    rawJson: json,
+                  );
+                }
+
+                /// Convert to JSON
+                Map<String, dynamic> toJson() {
+                  return {
+                    'id': id,
+                    'name': name,
+                    'description': description,
+                    'created_at': createdAt?.toIso8601String(),
+                    'updated_at': updatedAt?.toIso8601String(),
+                  };
+                }
+
+                /// Create dummy instance for testing
+                factory ModuleNameModel.dummy({String? id}) {
+                  return ModuleNameModel(
+                    id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                    name: 'Sample ModuleName',
+                    description: 'This is a sample ModuleName for testing',
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    rawJson: {},
+                  );
+                }
+
+                /// Convert to entity
+                ModuleNameEntity toEntity() => this;
+
+                @override
+                ModuleNameModel copyWith({
+                  String? id,
+                  String? name,
+                  String? description,
+                  DateTime? createdAt,
+                  DateTime? updatedAt,
+                  Map<String, dynamic>? rawJson,
+                }) {
+                  return ModuleNameModel(
+                    id: id ?? this.id,
+                    name: name ?? this.name,
+                    description: description ?? this.description,
+                    createdAt: createdAt ?? this.createdAt,
+                    updatedAt: updatedAt ?? this.updatedAt,
+                    rawJson: rawJson ?? this.rawJson,
+                  );
+                }
+              }
+
+      - folder: datasources
+        contents:
+          - file: local_data_source.dart
+            code: |
+              import '../models/model.dart';
+              import '../../domain/entities/pagination_params.dart';
+              import '../../domain/entities/paginated_response.dart';
+
+              /// Local data source interface
+              abstract class ModuleNameLocalDataSource {
+                Future<List<ModuleNameModel>> getAllItems();
+                Future<PaginatedResponse<ModuleNameModel>> getAllItemsPaginated(
+                    PaginationParams params);
+                Future<ModuleNameModel?> getItemById(String id);
+                Future<void> addItem(ModuleNameModel model);
+                Future<void> updateItem(ModuleNameModel model);
+                Future<void> deleteItem(String id);
+                Future<List<ModuleNameModel>> searchItems(String query);
+                Future<void> addItems(List<ModuleNameModel> models);
+                Future<void> deleteItems(List<String> ids);
+                Future<void> clearCache();
+              }
+
+              /// Local data source implementation
+              class ModuleNameLocalDataSourceImpl implements ModuleNameLocalDataSource {
+                // In-memory cache for demo purposes
+                // In real app, use Hive, SQLite, or other local storage
+                final List<ModuleNameModel> _cache = [];
+
+                @override
+                Future<List<ModuleNameModel>> getAllItems() async {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  return List.from(_cache);
+                }
+
+                @override
+                Future<PaginatedResponse<ModuleNameModel>> getAllItemsPaginated(
+                    PaginationParams params) async {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  
+                  final startIndex = (params.page - 1) * params.limit;
+                  final endIndex = startIndex + params.limit;
+                  
+                  var filteredItems = _cache;
+                  
+                  // Apply search filter
+                  if (params.search != null && params.search!.isNotEmpty) {
+                    filteredItems = _cache.where((item) =>
+                        item.name?.toLowerCase().contains(params.search!.toLowerCase()) == true ||
+                        item.description?.toLowerCase().contains(params.search!.toLowerCase()) == true
+                    ).toList();
+                  }
+                  
+                  final items = filteredItems.skip(startIndex).take(params.limit).toList();
+                  
+                  return PaginatedResponse<ModuleNameModel>(
+                    items: items,
+                    hasMore: endIndex < filteredItems.length,
+                    totalPages: (filteredItems.length / params.limit).ceil(),
+                    currentPage: params.page,
+                    totalItems: filteredItems.length,
+                  );
+                }
+
+                @override
+                Future<ModuleNameModel?> getItemById(String id) async {
+                  await Future.delayed(const Duration(milliseconds: 50));
+                  try {
+                    return _cache.firstWhere((item) => item.id == id);
+                  } catch (e) {
+                    return null;
+                  }
+                }
+
+                @override
+                Future<void> addItem(ModuleNameModel model) async {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  _cache.add(model);
+                }
+
+                @override
+                Future<void> updateItem(ModuleNameModel model) async {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  final index = _cache.indexWhere((item) => item.id == model.id);
+                  if (index != -1) {
+                    _cache[index] = model;
+                  }
+                }
+
+                @override
+                Future<void> deleteItem(String id) async {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  _cache.removeWhere((item) => item.id == id);
+                }
+
+                @override
+                Future<List<ModuleNameModel>> searchItems(String query) async {
+                  await Future.delayed(const Duration(milliseconds: 150));
+                  return _cache.where((item) =>
+                      item.name?.toLowerCase().contains(query.toLowerCase()) == true ||
+                      item.description?.toLowerCase().contains(query.toLowerCase()) == true
+                  ).toList();
+                }
+
+                @override
+                Future<void> addItems(List<ModuleNameModel> models) async {
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  _cache.addAll(models);
+                }
+
+                @override
+                Future<void> deleteItems(List<String> ids) async {
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  _cache.removeWhere((item) => ids.contains(item.id));
+                }
+
+                @override
+                Future<void> clearCache() async {
+                  _cache.clear();
+                }
+              }
+
+          - file: remote_data_source.dart
+            code: |
+              import '../models/model.dart';
+              import '../../domain/entities/pagination_params.dart';
+              import '../../domain/entities/paginated_response.dart';
+
+              /// Remote data source interface
+              abstract class ModuleNameRemoteDataSource {
+                Future<List<ModuleNameModel>> getAllItems();
+                Future<PaginatedResponse<ModuleNameModel>> getAllItemsPaginated(
+                    PaginationParams params);
+                Future<ModuleNameModel?> getItemById(String id);
+                Future<void> addItem(ModuleNameModel model);
+                Future<void> updateItem(ModuleNameModel model);
+                Future<void> deleteItem(String id);
+                Future<List<ModuleNameModel>> searchItems(String query);
+                Future<void> addItems(List<ModuleNameModel> models);
+                Future<void> deleteItems(List<String> ids);
+              }
+
+              /// Remote data source implementation
+              class ModuleNameRemoteDataSourceImpl implements ModuleNameRemoteDataSource {
+                // TODO: Implement actual API calls
+                // This is a placeholder implementation
+
+                @override
+                Future<List<ModuleNameModel>> getAllItems() async {
+                  // TODO: Make HTTP GET request to /api/module_name
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<PaginatedResponse<ModuleNameModel>> getAllItemsPaginated(
+                    PaginationParams params) async {
+                  // TODO: Make HTTP GET request to /api/module_name with pagination
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<ModuleNameModel?> getItemById(String id) async {
+                  // TODO: Make HTTP GET request to /api/module_name/{id}
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<void> addItem(ModuleNameModel model) async {
+                  // TODO: Make HTTP POST request to /api/module_name
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<void> updateItem(ModuleNameModel model) async {
+                  // TODO: Make HTTP PUT request to /api/module_name/{id}
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<void> deleteItem(String id) async {
+                  // TODO: Make HTTP DELETE request to /api/module_name/{id}
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<List<ModuleNameModel>> searchItems(String query) async {
+                  // TODO: Make HTTP GET request to /api/module_name/search?q={query}
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<void> addItems(List<ModuleNameModel> models) async {
+                  // TODO: Make HTTP POST request to /api/module_name/bulk
+                  throw UnimplementedError('Implement API call');
+                }
+
+                @override
+                Future<void> deleteItems(List<String> ids) async {
+                  // TODO: Make HTTP DELETE request to /api/module_name/bulk
+                  throw UnimplementedError('Implement API call');
+                }
+              }
+
+      - folder: repositories
+        contents:
+          - file: repository_impl.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../domain/entities/entity.dart';
+              import '../../domain/entities/paginated_response.dart';
+              import '../../domain/entities/pagination_params.dart';
+              import '../../domain/repositories/repository.dart';
+              import '../datasources/local_data_source.dart';
+              import '../datasources/remote_data_source.dart';
+
+              /// ModuleName repository implementation
+              class ModuleNameRepositoryImpl implements ModuleNameRepository {
+                final ModuleNameLocalDataSource localDataSource;
+                final ModuleNameRemoteDataSource remoteDataSource;
+
+                const ModuleNameRepositoryImpl({
+                  required this.localDataSource,
+                  required this.remoteDataSource,
+                });
+
+                @override
+                Future<Either<Failure, List<ModuleNameEntity>>> getAllItems() async {
+                  try {
+                    final remoteItems = await remoteDataSource.getAllItems();
+                    // Cache locally
+                    await localDataSource.clearCache();
+                    await localDataSource.addItems(remoteItems);
+                    return right(remoteItems);
+                  } catch (error) {
+                    try {
+                      // Fallback to local cache
+                      final localItems = await localDataSource.getAllItems();
+                      return right(localItems);
+                    } catch (localError) {
+                      return left(const ServerFailure('Failed to fetch items'));
+                    }
+                  }
+                }
+
+                @override
+                Future<Either<Failure, PaginatedResponse<ModuleNameEntity>>> 
+                    getAllItemsPaginated(PaginationParams params) async {
+                  try {
+                    final response = await remoteDataSource.getAllItemsPaginated(params);
+                    return right(response);
+                  } catch (error) {
+                    try {
+                      // Fallback to local cache
+                      final localResponse = await localDataSource.getAllItemsPaginated(params);
+                      return right(localResponse);
+                    } catch (localError) {
+                      return left(const ServerFailure('Failed to fetch paginated items'));
+                    }
+                  }
+                }
+
+                @override
+                Future<Either<Failure, ModuleNameEntity?>> getItemById(String id) async {
+                  try {
+                    final remoteItem = await remoteDataSource.getItemById(id);
+                    if (remoteItem != null) {
+                      await localDataSource.addItem(remoteItem);
+                    }
+                    return right(remoteItem);
+                  } catch (error) {
+                    try {
+                      // Fallback to local cache
+                      final localItem = await localDataSource.getItemById(id);
+                      return right(localItem);
+                    } catch (localError) {
+                      return left(const NotFoundFailure());
+                    }
+                  }
+                }
+
+                @override
+                Future<Either<Failure, Unit>> addItem(ModuleNameEntity entity) async {
+                  try {
+                    await remoteDataSource.addItem(entity as ModuleNameModel);
+                    await localDataSource.addItem(entity);
+                    return right(unit);
+                  } catch (error) {
+                    return left(const ServerFailure('Failed to add item'));
+                  }
+                }
+
+                @override
+                Future<Either<Failure, Unit>> updateItem(ModuleNameEntity entity) async {
+                  try {
+                    await remoteDataSource.updateItem(entity as ModuleNameModel);
+                    await localDataSource.updateItem(entity);
+                    return right(unit);
+                  } catch (error) {
+                    return left(const ServerFailure('Failed to update item'));
+                  }
+                }
+
+                @override
+                Future<Either<Failure, Unit>> deleteItem(String id) async {
+                  try {
+                    await remoteDataSource.deleteItem(id);
+                    await localDataSource.deleteItem(id);
+                    return right(unit);
+                  } catch (error) {
+                    return left(const ServerFailure('Failed to delete item'));
+                  }
+                }
+
+                @override
+                Future<Either<Failure, List<ModuleNameEntity>>> searchItems(String query) async {
+                  try {
+                    final remoteItems = await remoteDataSource.searchItems(query);
+                    return right(remoteItems);
+                  } catch (error) {
+                    try {
+                      // Fallback to local search
+                      final localItems = await localDataSource.searchItems(query);
+                      return right(localItems);
+                    } catch (localError) {
+                      return left(const ServerFailure('Failed to search items'));
+                    }
+                  }
+                }
+
+                @override
+                Future<Either<Failure, Unit>> addItems(List<ModuleNameEntity> entities) async {
+                  try {
+                    final models = entities.cast<ModuleNameModel>();
+                    await remoteDataSource.addItems(models);
+                    await localDataSource.addItems(models);
+                    return right(unit);
+                  } catch (error) {
+                    return left(const ServerFailure('Failed to add items'));
+                  }
+                }
+
+                @override
+                Future<Either<Failure, Unit>> deleteItems(List<String> ids) async {
+                  try {
+                    await remoteDataSource.deleteItems(ids);
+                    await localDataSource.deleteItems(ids);
+                    return right(unit);
+                  } catch (error) {
+                    return left(const ServerFailure('Failed to delete items'));
+                  }
+                }
+              }
+
+          - file: repository_impl_fake.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import '../../core/errors/failures.dart';
+              import '../../domain/entities/entity.dart';
+              import '../../domain/entities/paginated_response.dart';
+              import '../../domain/entities/pagination_params.dart';
+              import '../../domain/repositories/repository.dart';
+              import '../models/model.dart';
+
+              /// Fake repository implementation for testing and development
+              class ModuleNameRepositoryFake implements ModuleNameRepository {
+                static final List<ModuleNameModel> _fakeData = [
+                  ModuleNameModel.dummy(id: '1').copyWith(name: 'First ModuleName'),
+                  ModuleNameModel.dummy(id: '2').copyWith(name: 'Second ModuleName'),
+                  ModuleNameModel.dummy(id: '3').copyWith(name: 'Third ModuleName'),
+                ];
+
+                // Initialize with more fake data
+                static void _initializeFakeData() {
+                  if (_fakeData.length < 50) {
+                    for (int i = _fakeData.length; i < 50; i++) {
+                      _fakeData.add(
+                        ModuleNameModel.dummy(id: (i + 1).toString())
+                            .copyWith(name: 'ModuleName ${i + 1}'),
+                      );
+                    }
+                  }
+                }
+
+                ModuleNameRepositoryFake() {
+                  _initializeFakeData();
+                }
+
+                @override
+                Future<Either<Failure, List<ModuleNameEntity>>> getAllItems() async {
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  return right(List<ModuleNameEntity>.from(_fakeData));
+                }
+
+                @override
+                Future<Either<Failure, PaginatedResponse<ModuleNameEntity>>> 
+                    getAllItemsPaginated(PaginationParams params) async {
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  
+                  final startIndex = (params.page - 1) * params.limit;
+                  final endIndex = startIndex + params.limit;
+                  
+                  var filteredData = _fakeData;
+                  
+                  // Apply search filter
+                  if (params.search != null && params.search!.isNotEmpty) {
+                    filteredData = _fakeData.where((item) =>
+                        item.name?.toLowerCase().contains(params.search!.toLowerCase()) == true ||
+                        item.description?.toLowerCase().contains(params.search!.toLowerCase()) == true
+                    ).toList();
+                  }
+                  
+                  final items = filteredData.skip(startIndex).take(params.limit).toList();
+                  
+                  return right(PaginatedResponse<ModuleNameEntity>(
+                    items: List<ModuleNameEntity>.from(items),
+                    hasMore: endIndex < filteredData.length,
+                    totalPages: (filteredData.length / params.limit).ceil(),
+                    currentPage: params.page,
+                    totalItems: filteredData.length,
+                  ));
+                }
+
+                @override
+                Future<Either<Failure, ModuleNameEntity?>> getItemById(String id) async {
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  try {
+                    final item = _fakeData.firstWhere((item) => item.id == id);
+                    return right(item);
+                  } catch (e) {
+                    return left(const NotFoundFailure());
+                  }
+                }
+
+                @override
+                Future<Either<Failure, Unit>> addItem(ModuleNameEntity entity) async {
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  _fakeData.add(entity as ModuleNameModel);
+                  return right(unit);
+                }
+
+                @override
+                Future<Either<Failure, Unit>> updateItem(ModuleNameEntity entity) async {
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  final index = _fakeData.indexWhere((item) => item.id == entity.id);
+                  if (index != -1) {
+                    _fakeData[index] = entity as ModuleNameModel;
+                    return right(unit);
+                  }
+                  return left(const NotFoundFailure());
+                }
+
+                @override
+                Future<Either<Failure, Unit>> deleteItem(String id) async {
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  final removed = _fakeData.removeWhere((item) => item.id == id);
+                  return right(unit);
+                }
+
+                @override
+                Future<Either<Failure, List<ModuleNameEntity>>> searchItems(String query) async {
+                  await Future.delayed(const Duration(milliseconds: 400));
+                  final results = _fakeData.where((item) =>
+                      item.name?.toLowerCase().contains(query.toLowerCase()) == true ||
+                      item.description?.toLowerCase().contains(query.toLowerCase()) == true
+                  ).toList();
+                  return right(List<ModuleNameEntity>.from(results));
+                }
+
+                @override
+                Future<Either<Failure, Unit>> addItems(List<ModuleNameEntity> entities) async {
+                  await Future.delayed(const Duration(milliseconds: 500));
+                  _fakeData.addAll(entities.cast<ModuleNameModel>());
+                  return right(unit);
+                }
+
+                @override
+                Future<Either<Failure, Unit>> deleteItems(List<String> ids) async {
+                  await Future.delayed(const Duration(milliseconds: 500));
+                  _fakeData.removeWhere((item) => ids.contains(item.id));
+                  return right(unit);
+                }
+              }
+  # ===== DEPENDENCY INJECTION LAYER =====
+  - category: di
+    contents:
+      - file: di.dart
+        code: |
+          import 'package:flutter_riverpod/flutter_riverpod.dart';
+          import '../data/datasources/local_data_source.dart';
+          import '../data/datasources/remote_data_source.dart';
+          import '../data/repositories/repository_impl.dart';
+          import '../data/repositories/repository_impl_fake.dart';
+          import '../domain/repositories/repository.dart';
+          import '../domain/usecases/add.dart';
+          import '../domain/usecases/delete.dart';
+          import '../domain/usecases/get_all.dart';
+          import '../domain/usecases/get_all_paginated.dart';
+          import '../domain/usecases/get_by_id.dart';
+          import '../domain/usecases/search.dart';
+          import '../domain/usecases/update.dart';
+
+          // ===== DATA SOURCES =====
+          final localDataModuleNameSourceProvider = Provider<ModuleNameLocalDataSource>((ref) {
+            return ModuleNameLocalDataSourceImpl();
+          });
+
+          final remoteDataModuleNameSourceProvider = Provider<ModuleNameRemoteDataSource>((ref) {
+            return ModuleNameRemoteDataSourceImpl();
+          });
+
+          // ===== REPOSITORY =====
+          final moduleNameRepositoryProvider = Provider<ModuleNameRepository>((ref) {
+            // Use fake repository for development/testing
+            // Switch to real implementation when API is ready
+            return ModuleNameRepositoryFake();
+            
+            // Uncomment below for real implementation:
+            // final local = ref.read(localDataModuleNameSourceProvider);
+            // final remote = ref.read(remoteDataModuleNameSourceProvider);
+            // return ModuleNameRepositoryImpl(
+            //   localDataSource: local,
+            //   remoteDataSource: remote,
+            // );
+          });
+
+          // ===== USE CASES =====
+          final getAllModuleNameUseCaseProvider = Provider<GetAllModuleNameUseCase>((ref) {
+            return GetAllModuleNameUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+          final getAllModuleNamePaginatedUseCaseProvider = 
+              Provider<GetAllModuleNamePaginatedUseCase>((ref) {
+            return GetAllModuleNamePaginatedUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+          final getModuleNameByIdUseCaseProvider = Provider<GetModuleNameByIdUseCase>((ref) {
+            return GetModuleNameByIdUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+          final addModuleNameUseCaseProvider = Provider<AddModuleNameUseCase>((ref) {
+            return AddModuleNameUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+          final updateModuleNameUseCaseProvider = Provider<UpdateModuleNameUseCase>((ref) {
+            return UpdateModuleNameUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+          final deleteModuleNameUseCaseProvider = Provider<DeleteModuleNameUseCase>((ref) {
+            return DeleteModuleNameUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+          final searchModuleNameUseCaseProvider = Provider<SearchModuleNameUseCase>((ref) {
+            return SearchModuleNameUseCase(ref.watch(moduleNameRepositoryProvider));
+          });
+
+  # ===== PRESENTATION LAYER =====
+  - category: presentation
+    contents:
+      - folder: providers
+        contents:
+          - file: base_notifiers.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import 'package:flutter_riverpod/flutter_riverpod.dart';
+              import '../../core/errors/failures.dart';
+
+              /// Base mixin for handling CRUD operations
+              mixin CrudMixin on AsyncNotifier<void> {
+                Future<void> handleCrudOperation(
+                  Future<Either<Failure, dynamic>> operation, {
+                  ProviderBase? refreshProvider,
+                }) async {
+                  state = const AsyncValue.loading();
+                  final result = await operation;
+                  
+                  state = result.fold(
+                    (failure) => AsyncValue.error(
+                      _mapFailureToException(failure), 
+                      StackTrace.current,
+                    ),
+                    (_) => const AsyncValue.data(null),
+                  );
+                  
+                  // Refresh related providers on success
+                  if (!state.hasError && refreshProvider != null) {
+                    ref.invalidate(refreshProvider);
+                  }
+                }
+
+                Exception _mapFailureToException(Failure failure) {
+                  return switch (failure) {
+                    NetworkFailure() => Exception('Network error occurred'),
+                    ServerFailure() => Exception('Server error occurred'),
+                    TimeoutFailure() => Exception('Request timeout'),
+                    CacheFailure() => Exception('Cache error occurred'),
+                    ValidationFailure() => Exception('Validation error occurred'),
+                    NotFoundFailure() => Exception('Item not found'),
+                    UnauthorizedFailure() => Exception('Unauthorized access'),
+                    ForbiddenFailure() => Exception('Access forbidden'),
+                    UnexpectedFailure() => Exception('An unexpected error occurred'),
+                    _ => Exception('Unknown error occurred'),
+                  };
+                }
+              }
+
+              /// Base class for list notifiers with common functionality
+              abstract class BaseListNotifier<T> extends AsyncNotifier<List<T>> {
+                Exception mapFailureToException(Failure failure) {
+                  return switch (failure) {
+                    NetworkFailure() => Exception('Network error occurred'),
+                    ServerFailure() => Exception('Server error occurred'),
+                    TimeoutFailure() => Exception('Request timeout'),
+                    CacheFailure() => Exception('Cache error occurred'),
+                    ValidationFailure() => Exception('Validation error occurred'),
+                    NotFoundFailure() => Exception('Items not found'),
+                    UnauthorizedFailure() => Exception('Unauthorized access'),
+                    ForbiddenFailure() => Exception('Access forbidden'),
+                    UnexpectedFailure() => Exception('An unexpected error occurred'),
+                    _ => Exception('Unknown error occurred'),
+                  };
+                }
+              }
+
+          - file: providers.dart
+            code: |
+              import 'package:dartz/dartz.dart';
+              import 'package:flutter_riverpod/flutter_riverpod.dart';
+              import '../../core/errors/failures.dart';
+              import '../../core/usecases/usecase.dart';
+              import '../../core/utils/debouncer.dart';
+              import '../../di/di.dart';
+              import '../../domain/entities/entity.dart';
+              import '../../domain/entities/paginated_response.dart';
+              import '../../domain/entities/pagination_params.dart';
+              import 'base_notifiers.dart';
+
+              // ===== LIST PROVIDERS =====
+
+              /// Non-paginated list provider
+              class GetAllModuleNameNotifier extends BaseListNotifier<ModuleNameEntity> {
+                @override
+                Future<List<ModuleNameEntity>> build() async {
+                  final result = await ref.read(getAllModuleNameUseCaseProvider)(const NoParams());
+                  return result.fold(
+                    (failure) => throw mapFailureToException(failure),
+                    (items) => items,
+                  );
+                }
+
+                Future<void> refresh() async {
+                  ref.invalidateSelf();
+                }
+              }
+
+              /// Paginated list provider
+              class GetAllModuleNamePaginatedNotifier 
+                  extends AsyncNotifier<PaginatedResponse<ModuleNameEntity>> {
+                int _page = 1;
+                bool _hasMore = true;
+                String? _searchQuery;
+                final List<ModuleNameEntity> _items = [];
+                final Debouncer _debouncer = Debouncer(const Duration(milliseconds: 300));
+
+                @override
+                Future<PaginatedResponse<ModuleNameEntity>> build() async {
+                  _page = 1;
+                  _hasMore = true;
+                  _searchQuery = null;
+                  _items.clear();
+                  return _fetchData();
+                }
+
+                Future<void> refresh() async {
+                  _page = 1;
+                  _hasMore = true;
+                  _items.clear();
+                  ref.invalidateSelf();
+                }
+
+                Future<void> loadMore() async {
+                  if (!_hasMore || state.isLoading) return;
+                  
+                  // Show loading indicator for pagination
+                  state = AsyncValue.data(
+                    state.value!.copyWith(isPaginating: true),
+                  );
+                  
+                  _debouncer.run(() async {
+                    _page++;
+                    final newData = await _fetchData();
+                    state = AsyncValue.data(newData);
+                  });
+                }
+
+                Future<void> search(String query) async {
+                  _searchQuery = query.isEmpty ? null : query;
+                  _page = 1;
+                  _hasMore = true;
+                  _items.clear();
+                  
+                  _debouncer.run(() async {
+                    final newData = await _fetchData();
+                    state = AsyncValue.data(newData);
+                  });
+                }
+
+                Future<PaginatedResponse<ModuleNameEntity>> _fetchData() async {
+                  final params = PaginationParams(
+                    page: _page,
+                    limit: 20,
+                    search: _searchQuery,
+                  );
+
+                  final result = await ref.read(getAllModuleNamePaginatedUseCaseProvider)(params);
+
+                  return result.fold(
+                    (failure) => throw _mapFailureToException(failure),
+                    (paginated) {
+                      _hasMore = paginated.hasMore;
+                      
+                      if (_page == 1) {
+                        _items.clear();
+                      }
+                      _items.addAll(paginated.items);
+                      
+                      return PaginatedResponse<ModuleNameEntity>(
+                        items: List.from(_items),
+                        hasMore: paginated.hasMore,
+                        totalPages: paginated.totalPages,
+                        currentPage: _page,
+                        totalItems: paginated.totalItems,
+                        isPaginating: false,
+                      );
+                    },
+                  );
+                }
+
+                Exception _mapFailureToException(Failure failure) {
+                  return switch (failure) {
+                    NetworkFailure() => Exception('Network error occurred'),
+                    ServerFailure() => Exception('Server error occurred'),
+                    TimeoutFailure() => Exception('Request timeout'),
+                    CacheFailure() => Exception('Cache error occurred'),
+                    ValidationFailure() => Exception('Validation error occurred'),
+                    NotFoundFailure() => Exception('Items not found'),
+                    UnauthorizedFailure() => Exception('Unauthorized access'),
+                    ForbiddenFailure() => Exception('Access forbidden'),
+                    UnexpectedFailure() => Exception('An unexpected error occurred'),
+                    _ => Exception('Unknown error occurred'),
+                  };
+                }
+
+                @override
+                void dispose() {
+                  _debouncer.dispose();
+                  super.dispose();
+                }
+              }
+
+              // ===== CRUD PROVIDERS =====
+
+              /// Get item by ID provider
+              class GetModuleNameByIdNotifier extends AsyncNotifier<ModuleNameEntity?> {
+                @override
+                Future<ModuleNameEntity?> build() async => null;
+
+                Future<void> getModuleNameById(String id) async {
+                  state = const AsyncValue.loading();
+                  final result = await ref.read(getModuleNameByIdUseCaseProvider)(id);
+                  state = result.fold(
+                    (failure) => AsyncValue.error(
+                      _mapFailureToException(failure), 
+                      StackTrace.current,
+                    ),
+                    (item) => AsyncValue.data(item),
+                  );
+                }
+
+                Exception _mapFailureToException(Failure failure) {
+                  return switch (failure) {
+                    NetworkFailure() => Exception('Network error occurred'),
+                    ServerFailure() => Exception('Server error occurred'),
+                    TimeoutFailure() => Exception('Request timeout'),
+                    NotFoundFailure() => Exception('Item not found'),
+                    UnauthorizedFailure() => Exception('Unauthorized access'),
+                    ForbiddenFailure() => Exception('Access forbidden'),
+                    _ => Exception('Unknown error occurred'),
+                  };
+                }
+              }
+
+              /// Add item provider
+              class AddModuleNameNotifier extends AsyncNotifier<void> with CrudMixin {
+                @override
+                Future<void> build() async {}
+
+                Future<void> addModuleName(ModuleNameEntity item) async {
+                  await handleCrudOperation(
+                    ref.read(addModuleNameUseCaseProvider)(item),
+                    refreshProvider: getAllModuleNameProvider,
+                  );
+                }
+              }
+
+              /// Update item provider
+              class UpdateModuleNameNotifier extends AsyncNotifier<void> with CrudMixin {
+                @override
+                Future<void> build() async {}
+
+                Future<void> updateModuleName(ModuleNameEntity item) async {
+                  await handleCrudOperation(
+                    ref.read(updateModuleNameUseCaseProvider)(item),
+                    refreshProvider: getAllModuleNameProvider,
+                  );
+                }
+              }
+
+              /// Delete item provider
+              class DeleteModuleNameNotifier extends AsyncNotifier<void> with CrudMixin {
+                @override
+                Future<void> build() async {}
+
+                Future<void> deleteModuleName(String id) async {
+                  await handleCrudOperation(
+                    ref.read(deleteModuleNameUseCaseProvider)(id),
+                    refreshProvider: getAllModuleNameProvider,
+                  );
+                }
+              }
+
+              /// Search provider
+              class SearchModuleNameNotifier extends BaseListNotifier<ModuleNameEntity> {
+                String _query = '';
+
+                @override
+                Future<List<ModuleNameEntity>> build() async {
+                  return [];
+                }
+
+                Future<void> search(String query) async {
+                  _query = query;
+                  if (query.isEmpty) {
+                    state = const AsyncValue.data([]);
+                    return;
+                  }
+
+                  state = const AsyncValue.loading();
+                  final result = await ref.read(searchModuleNameUseCaseProvider)(query);
+                  state = result.fold(
+                    (failure) => AsyncValue.error(
+                      mapFailureToException(failure), 
+                      StackTrace.current,
+                    ),
+                    (items) => AsyncValue.data(items),
+                  );
+                }
+
+                void clear() {
+                  _query = '';
+                  state = const AsyncValue.data([]);
+                }
+              }
+
+              // ===== PROVIDER INSTANCES =====
+
+              final getAllModuleNameProvider = 
+                  AsyncNotifierProvider<GetAllModuleNameNotifier, List<ModuleNameEntity>>(
+                GetAllModuleNameNotifier.new,
+              );
+
+              final getAllModuleNamePaginatedProvider = AsyncNotifierProvider<
+                  GetAllModuleNamePaginatedNotifier, PaginatedResponse<ModuleNameEntity>>(
+                GetAllModuleNamePaginatedNotifier.new,
+              );
+
+              final getModuleNameByIdProvider = 
+                  AsyncNotifierProvider<GetModuleNameByIdNotifier, ModuleNameEntity?>(
+                GetModuleNameByIdNotifier.new,
+              );
+
+              final addModuleNameProvider = 
+                  AsyncNotifierProvider<AddModuleNameNotifier, void>(
+                AddModuleNameNotifier.new,
+              );
+
+              final updateModuleNameProvider = 
+                  AsyncNotifierProvider<UpdateModuleNameNotifier, void>(
+                UpdateModuleNameNotifier.new,
+              );
+
+              final deleteModuleNameProvider = 
+                  AsyncNotifierProvider<DeleteModuleNameNotifier, void>(
+                DeleteModuleNameNotifier.new,
+              );
+
+              final searchModuleNameProvider = 
+                  AsyncNotifierProvider<SearchModuleNameNotifier, List<ModuleNameEntity>>(
+                SearchModuleNameNotifier.new,
+              );
+
+      - folder: widgets
+        contents:
+          - file: base_widgets.dart
+            code: |
+              import 'package:flutter/material.dart';
+              import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+              /// Generic async state builder widget
+              class AsyncStateBuilder<T> extends StatelessWidget {
+                final AsyncValue<T> state;
+                final Widget Function(T data) builder;
+                final Widget Function()? loadingBuilder;
+                final Widget Function(Object error, StackTrace stackTrace)? errorBuilder;
+                final Widget Function()? emptyBuilder;
+
+                const AsyncStateBuilder({
+                  super.key,
+                  required this.state,
+                  required this.builder,
+                  this.loadingBuilder,
+                  this.errorBuilder,
+                  this.emptyBuilder,
+                });
+
+                @override
+                Widget build(BuildContext context) {
+                  return state.when(
+                    data: (data) {
+                      // Handle empty state for lists
+                      if (data is List && data.isEmpty && emptyBuilder != null) {
+                        return emptyBuilder!();
+                      }
+                      return builder(data);
+                    },
+                    loading: () => loadingBuilder?.call() ?? 
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, stackTrace) => errorBuilder?.call(error, stackTrace) ?? 
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error, color: Colors.red, size: 48),
+                              const SizedBox(height: 16),
+                              Text(
+                                error.toString(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                  );
+                }
+              }
+
+              /// Generic confirmation dialog
+              class ConfirmationDialog extends StatelessWidget {
+                final String title;
+                final String content;
+                final String confirmText;
+                final String cancelText;
+                final VoidCallback onConfirm;
+                final VoidCallback? onCancel;
+                final Color? confirmColor;
+
+                const ConfirmationDialog({
+                  super.key,
+                  required this.title,
+                  required this.content,
+                  required this.onConfirm,
+                  this.onCancel,
+                  this.confirmText = 'Confirm',
+                  this.cancelText = 'Cancel',
+                  this.confirmColor,
+                });
+
+                @override
+                Widget build(BuildContext context) {
+                  return AlertDialog(
+                    title: Text(title),
+                    content: Text(content),
+                    actions: [
+                      TextButton(
+                        onPressed: onCancel ?? () => Navigator.of(context).pop(false),
+                        child: Text(cancelText),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          onConfirm();
+                          Navigator.of(context).pop(true);
+                        },
+                        style: confirmColor != null 
+                            ? TextButton.styleFrom(foregroundColor: confirmColor)
+                            : null,
+                        child: Text(confirmText),
+                      ),
+                    ],
+                  );
+                }
+              }
+
+              /// Generic empty state widget
+              class EmptyStateWidget extends StatelessWidget {
+                final String title;
+                final String? subtitle;
+                final IconData icon;
+                final VoidCallback? onAction;
+                final String? actionText;
+
+                const EmptyStateWidget({
+                  super.key,
+                  required this.title,
+                  this.subtitle,
+                  this.icon = Icons.inbox,
+                  this.onAction,
+                  this.actionText,
+                });
+
+                @override
+                Widget build(BuildContext context) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            icon,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            title,
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              subtitle!,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[500],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          if (onAction != null && actionText != null) ...[
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: onAction,
+                              child: Text(actionText!),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }
+              }
+
+              /// Generic loading overlay
+              class LoadingOverlay extends StatelessWidget {
+                final String? message;
+
+                const LoadingOverlay({super.key, this.message});
+
+                @override
+                Widget build(BuildContext context) {
+                  return Container(
+                    color: Colors.black54,
+                    child: Center(
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(),
+                              if (message != null) ...[
+                                const SizedBox(height: 16),
+                                Text(message!),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              }
+
+          - file: shimmer_loading.dart
+            code: |
+              import 'package:flutter/material.dart';
+              import 'package:shimmer/shimmer.dart';
+
+              /// Shimmer loading widget for lists
+              class ModuleNameShimmerList extends StatelessWidget {
+                final int itemCount;
+                final EdgeInsets? padding;
+
+                const ModuleNameShimmerList({
+                  super.key,
+                  this.itemCount = 10,
+                  this.padding,
+                });
+
+                @override
+                Widget build(BuildContext context) {
+                  return Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: ListView.builder(
+                      padding: padding,
+                      itemCount: itemCount,
+                      itemBuilder: (_, __) => const _ShimmerListItem(),
+                    ),
+                  );
+                }
+              }
+
+              class _ShimmerListItem extends StatelessWidget {
+                const _ShimmerListItem();
+
+                @override
+                Widget build(BuildContext context) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.white,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: 150,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }
+
+              /// Shimmer loading for grid items
+              class ModuleNameShimmerGrid extends StatelessWidget {
+                final int itemCount;
+                final int crossAxisCount;
+                final EdgeInsets? padding;
+
+                const ModuleNameShimmerGrid({
+                  super.key,
+                  this.itemCount = 6,
+                  this.crossAxisCount = 2,
+                  this.padding,
+                });
+
+                @override
+                Widget build(BuildContext context) {
+                  return Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: GridView.builder(
+                      padding: padding,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        childAspectRatio: 1,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: itemCount,
+                      itemBuilder: (_, __) => Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              }
+
+          - file: crud_listener.dart
+            code: |
+              import 'package:flutter/material.dart';
+              import 'package:flutter_riverpod/flutter_riverpod.dart';
+              import 'base_widgets.dart';
+
+              /// Listens to CRUD operations and shows appropriate UI feedback
+              class ModuleNameOperationListener extends ConsumerWidget {
+                final List<ProviderBase> providers;
+                final Widget child;
+                final String? loadingMessage;
+                final String? successMessage;
+
+                const ModuleNameOperationListener({
+                  super.key,
+                  required this.providers,
+                  required this.child,
+                  this.loadingMessage,
+                  this.successMessage,
+                });
+
+                @override
+                Widget build(BuildContext context, WidgetRef ref) {
+                  for (final provider in providers) {
+                    ref.listen(provider, (previous, next) {
+                      _handleStateChange(context, previous, next);
+                    });
+                  }
+                  return child;
+                }
+
+                void _handleStateChange(
+                  BuildContext context, 
+                  AsyncValue? previous, 
+                  AsyncValue next,
+                ) {
+                  // Show loading dialog
+                  if (next.isLoading && !previous!.isLoading) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => LoadingOverlay(message: loadingMessage),
+                    );
+                  }
+                  // Handle error
+                  else if (next.hasError && previous!.isLoading) {
+                    Navigator.of(context).pop(); // Close loading dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(next.error.toString()),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                        action: SnackBarAction(
+                          label: 'Dismiss',
+                          textColor: Colors.white,
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                  // Handle success
+                  else if (next.hasValue && previous!.isLoading) {
+                    Navigator.of(context).pop(); // Close loading dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(successMessage ?? 'Operation completed successfully'),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              }
+
+              /// Multi-provider CRUD listener for complex operations
+              class MultiProviderCrudListener extends ConsumerWidget {
+                final Map<ProviderBase, CrudListenerConfig> providerConfigs;
+                final Widget child;
+
+                const MultiProviderCrudListener({
+                  super.key,
+                  required this.providerConfigs,
+                  required this.child,
+                });
+
+                @override
+                Widget build(BuildContext context, WidgetRef ref) {
+                  for (final entry in providerConfigs.entries) {
+                    ref.listen(entry.key, (previous, next) {
+                      _handleStateChange(context, previous, next, entry.value);
+                    });
+                  }
+                  return child;
+                }
+
+                void _handleStateChange(
+                  BuildContext context,
+                  AsyncValue? previous,
+                  AsyncValue next,
+                  CrudListenerConfig config,
+                ) {
+                  if (next.isLoading && !previous!.isLoading) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => LoadingOverlay(message: config.loadingMessage),
+                    );
+                  } else if (next.hasError && previous!.isLoading) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(config.errorMessage ?? next.error.toString()),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  } else if (next.hasValue && previous!.isLoading) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(config.successMessage),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+              }
+
+              /// Configuration for CRUD listener
+              class CrudListenerConfig {
+                final String? loadingMessage;
+                final String successMessage;
+                final String? errorMessage;
+
+                const CrudListenerConfig({
+                  this.loadingMessage,
+                  required this.successMessage,
+                  this.errorMessage,
+                });
+              }
+      - folder: pages
+        contents:
+          - file: list_page.dart
+            code: |
+              import 'package:flutter/material.dart';
+              import 'package:flutter_riverpod/flutter_riverpod.dart';
+              import '../../data/models/model.dart';
+              import '../../domain/entities/entity.dart';
+              import '../providers/providers.dart';
+              import '../widgets/base_widgets.dart';
+              import '../widgets/crud_listener.dart';
+              import '../widgets/shimmer_loading.dart';
+              import 'widgets/module_name_form_dialog.dart';
+              import 'widgets/module_name_item_tile.dart';
+              import 'widgets/module_name_search_delegate.dart';
+
+              /// ModuleName list page with pagination
+              class ModuleNameListPage extends ConsumerStatefulWidget {
+                const ModuleNameListPage({super.key});
+
+                @override
+                ConsumerState<ModuleNameListPage> createState() => _ModuleNameListPageState();
+              }
+
+              class _ModuleNameListPageState extends ConsumerState<ModuleNameListPage> {
+                final ScrollController _scrollController = ScrollController();
+                final TextEditingController _searchController = TextEditingController();
+
+                @override
+                void initState() {
+                  super.initState();
+                  _scrollController.addListener(_scrollListener);
+                }
+
+                @override
+                void dispose() {
+                  _scrollController.dispose();
+                  _searchController.dispose();
+                  super.dispose();
+                }
+
+                void _scrollListener() {
+                  if (_scrollController.position.pixels >= 
+                      _scrollController.position.maxScrollExtent - 200) {
+                    ref.read(getAllModuleNamePaginatedProvider.notifier).loadMore();
+                  }
+                }
+
+                @override
+                Widget build(BuildContext context) {
+                  final paginatedState = ref.watch(getAllModuleNamePaginatedProvider);
+
+                  return MultiProviderCrudListener(
+                    providerConfigs: {
+                      addModuleNameProvider: const CrudListenerConfig(
+                        loadingMessage: 'Adding item...',
+                        successMessage: 'Item added successfully',
+                      ),
+                      updateModuleNameProvider: const CrudListenerConfig(
+                        loadingMessage: 'Updating item...',
+                        successMessage: 'Item updated successfully',
+                      ),
+                      deleteModuleNameProvider: const CrudListenerConfig(
+                        loadingMessage: 'Deleting item...',
+                        successMessage: 'Item deleted successfully',
+                      ),
+                    },
+                    child: Scaffold(
+                      appBar: AppBar(
+                        title: const Text('ModuleName List'),
+                        actions: [
+                          IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () => showSearch(
+                              context: context,
+                              delegate: ModuleNameSearchDelegate(),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            onPressed: () => ref.refresh(getAllModuleNamePaginatedProvider),
+                          ),
+                        ],
+                        bottom: PreferredSize(
+                          preferredSize: const Size.fromHeight(60),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: 'Search ModuleName...',
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: _searchController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          ref.read(getAllModuleNamePaginatedProvider.notifier)
+                                              .search('');
+                                        },
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                              ),
+                              onChanged: (value) {
+                                ref.read(getAllModuleNamePaginatedProvider.notifier)
+                                    .search(value);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      body: RefreshIndicator(
+                        onRefresh: () async {
+                          ref.refresh(getAllModuleNamePaginatedProvider);
+                        },
+                        child: AsyncStateBuilder<PaginatedResponse<ModuleNameEntity>>(
+                          state: paginatedState,
+                          builder: (data) => _buildList(data),
+                          loadingBuilder: () => const ModuleNameShimmerList(),
+                          emptyBuilder: () => const EmptyStateWidget(
+                            title: 'No items found',
+                            subtitle: 'Add your first ModuleName to get started',
+                            icon: Icons.inbox,
+                          ),
+                        ),
+                      ),
+                      floatingActionButton: FloatingActionButton(
+                        onPressed: () => _showAddDialog(),
+                        child: const Icon(Icons.add),
+                      ),
+                    ),
+                  );
+                }
+
+                Widget _buildList(PaginatedResponse<ModuleNameEntity> data) {
+                  if (data.items.isEmpty) {
+                    return const EmptyStateWidget(
+                      title: 'No items found',
+                      subtitle: 'Try adjusting your search or add a new item',
+                      icon: Icons.search_off,
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: data.items.length + (data.hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == data.items.length) {
+                              return data.isPaginating
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Center(child: CircularProgressIndicator()),
+                                    )
+                                  : const SizedBox.shrink();
+                            }
+
+                            final item = data.items[index];
+                            return ModuleNameItemTile(
+                              item: item,
+                              onTap: () => _showDetailDialog(item),
+                              onEdit: () => _showEditDialog(item),
+                              onDelete: () => _showDeleteConfirmation(item.id),
+                            );
+                          },
+                        ),
+                      ),
+                      if (data.isPaginating)
+                        const LinearProgressIndicator(),
+                    ],
+                  );
+                }
+
+                void _showAddDialog() {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ModuleNameFormDialog(
+                      onSave: (name, description) {
+                        final newItem = ModuleNameModel(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          name: name,
+                          description: description,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                          rawJson: {},
+                        );
+                        ref.read(addModuleNameProvider.notifier).addModuleName(newItem);
+                      },
+                    ),
+                  );
+                }
+
+                void _showEditDialog(ModuleNameEntity item) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ModuleNameFormDialog(
+                      item: item,
+                      onSave: (name, description) {
+                        final updatedItem = ModuleNameModel(
+                          id: item.id,
+                          name: name,
+                          description: description,
+                          createdAt: item.createdAt,
+                          updatedAt: DateTime.now(),
+                          rawJson: item.rawJson ?? {},
+                        );
+                        ref.read(updateModuleNameProvider.notifier).updateModuleName(updatedItem);
+                      },
+                    ),
+                  );
+                }
+
+                void _showDetailDialog(ModuleNameEntity item) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text(item.name ?? 'ModuleName Details'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('ID: ${item.id}'),
+                          const SizedBox(height: 8),
+                          if (item.description != null) ...[
+                            Text('Description: ${item.description}'),
+                            const SizedBox(height: 8),
+                          ],
+                          if (item.createdAt != null) ...[
+                            Text('Created: ${item.createdAt}'),
+                            const SizedBox(height: 8),
+                          ],
+                          if (item.updatedAt != null)
+                            Text('Updated: ${item.updatedAt}'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _showEditDialog(item);
+                          },
+                          child: const Text('Edit'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                void _showDeleteConfirmation(String id) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ConfirmationDialog(
+                      title: 'Delete Item',
+                      content: 'Are you sure you want to delete this item? This action cannot be undone.',
+                      confirmText: 'Delete',
+                      confirmColor: Colors.red,
+                      onConfirm: () {
+                        ref.read(deleteModuleNameProvider.notifier).deleteModuleName(id);
+                      },
+                    ),
+                  );
+                }
+              }
+
+          - file: simple_list_page.dart
+            code: |
+              import 'package:flutter/material.dart';
+              import 'package:flutter_riverpod/flutter_riverpod.dart';
+              import '../../data/models/model.dart';
+              import '../../domain/entities/entity.dart';
+              import '../providers/providers.dart';
+              import '../widgets/base_widgets.dart';
+              import '../widgets/crud_listener.dart';
+              import '../widgets/shimmer_loading.dart';
+              import 'widgets/module_name_form_dialog.dart';
+              import 'widgets/module_name_item_tile.dart';
+
+              /// Simple ModuleName list page without pagination
+              class ModuleNameSimpleListPage extends ConsumerWidget {
+                const ModuleNameSimpleListPage({super.key});
+
+                @override
+                Widget build(BuildContext context, WidgetRef ref) {
+                  final listState = ref.watch(getAllModuleNameProvider);
+
+                  return ModuleNameOperationListener(
+                    providers: [
+                      addModuleNameProvider,
+                      updateModuleNameProvider,
+                      deleteModuleNameProvider,
+                    ],
+                    child: Scaffold(
+                      appBar: AppBar(
+                        title: const Text('ModuleName List (Simple)'),
+                        actions: [
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            onPressed: () => ref.refresh(getAllModuleNameProvider),
+                          ),
+                        ],
+                      ),
+                      body: RefreshIndicator(
+                        onRefresh: () async {
+                          ref.refresh(getAllModuleNameProvider);
+                        },
+                        child: AsyncStateBuilder<List<ModuleNameEntity>>(
+                          state: listState,
+                          builder: (items) => items.isEmpty
+                              ? const EmptyStateWidget(
+                                  title: 'No items found',
+                                  subtitle: 'Add your first ModuleName to get started',
+                                  icon: Icons.inbox,
+                                )
+                              : ListView.builder(
+                                  itemCount: items.length,
+                                  itemBuilder: (context, index) {
+                                    final item = items[index];
+                                    return ModuleNameItemTile(
+                                      item: item,
+                                      onTap: () => _showDetailDialog(context, item),
+                                      onEdit: () => _showEditDialog(context, ref, item),
+                                      onDelete: () => _showDeleteConfirmation(context, ref, item.id),
+                                    );
+                                  },
+                                ),
+                          loadingBuilder: () => const ModuleNameShimmerList(),
+                        ),
+                      ),
+                      floatingActionButton: FloatingActionButton(
+                        onPressed: () => _showAddDialog(context, ref),
+                        child: const Icon(Icons.add),
+                      ),
+                    ),
+                  );
+                }
+
+                void _showAddDialog(BuildContext context, WidgetRef ref) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ModuleNameFormDialog(
+                      onSave: (name, description) {
+                        final newItem = ModuleNameModel(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          name: name,
+                          description: description,
+                          createdAt: DateTime.now(),
+                          updatedAt: DateTime.now(),
+                          rawJson: {},
+                        );
+                        ref.read(addModuleNameProvider.notifier).addModuleName(newItem);
+                      },
+                    ),
+                  );
+                }
+
+                void _showEditDialog(BuildContext context, WidgetRef ref, ModuleNameEntity item) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ModuleNameFormDialog(
+                      item: item,
+                      onSave: (name, description) {
+                        final updatedItem = ModuleNameModel(
+                          id: item.id,
+                          name: name,
+                          description: description,
+                          createdAt: item.createdAt,
+                          updatedAt: DateTime.now(),
+                          rawJson: item.rawJson ?? {},
+                        );
+                        ref.read(updateModuleNameProvider.notifier).updateModuleName(updatedItem);
+                      },
+                    ),
+                  );
+                }
+
+                void _showDetailDialog(BuildContext context, ModuleNameEntity item) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text(item.name ?? 'ModuleName Details'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('ID: ${item.id}'),
+                          const SizedBox(height: 8),
+                          if (item.description != null) ...[
+                            Text('Description: ${item.description}'),
+                            const SizedBox(height: 8),
+                          ],
+                          if (item.createdAt != null) ...[
+                            Text('Created: ${item.createdAt}'),
+                            const SizedBox(height: 8),
+                          ],
+                          if (item.updatedAt != null)
+                            Text('Updated: ${item.updatedAt}'),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                void _showDeleteConfirmation(BuildContext context, WidgetRef ref, String id) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => ConfirmationDialog(
+                      title: 'Delete Item',
+                      content: 'Are you sure you want to delete this item?',
+                      confirmText: 'Delete',
+                      confirmColor: Colors.red,
+                      onConfirm: () {
+                        ref.read(deleteModuleNameProvider.notifier).deleteModuleName(id);
+                      },
+                    ),
+                  );
+                }
+              }
+
+          - folder: widgets
+            contents:
+              - file: module_name_item_tile.dart
+                code: |
+                  import 'package:flutter/material.dart';
+                  import '../../../domain/entities/entity.dart';
+
+                  /// Individual item tile for ModuleName
+                  class ModuleNameItemTile extends StatelessWidget {
+                    final ModuleNameEntity item;
+                    final VoidCallback? onTap;
+                    final VoidCallback? onEdit;
+                    final VoidCallback? onDelete;
+
+                    const ModuleNameItemTile({
+                      super.key,
+                      required this.item,
+                      this.onTap,
+                      this.onEdit,
+                      this.onDelete,
+                    });
+
+                    @override
+                    Widget build(BuildContext context) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: Text(
+                              item.name?.isNotEmpty == true 
+                                  ? item.name![0].toUpperCase()
+                                  : 'M',
+                            ),
+                          ),
+                          title: Text(
+                            item.name ?? 'Unnamed ModuleName',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (item.description != null) ...[
+                                Text(
+                                  item.description!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+                              Text(
+                                'ID: ${item.id}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              if (item.createdAt != null)
+                                Text(
+                                  'Created: ${_formatDate(item.createdAt!)}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              switch (value) {
+                                case 'edit':
+                                  onEdit?.call();
+                                  break;
+                                case 'delete':
+                                  onDelete?.call();
+                                  break;
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: ListTile(
+                                  leading: Icon(Icons.edit),
+                                  title: Text('Edit'),
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: ListTile(
+                                  leading: Icon(Icons.delete, color: Colors.red),
+                                  title: Text('Delete', style: TextStyle(color: Colors.red)),
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ],
+                          ),
+                          onTap: onTap,
+                        ),
+                      );
+                    }
+
+                    String _formatDate(DateTime date) {
+                      return '${date.day}/${date.month}/${date.year}';
+                    }
+                  }
+
+              - file: module_name_form_dialog.dart
+                code: |
+                  import 'package:flutter/material.dart';
+                  import '../../../domain/entities/entity.dart';
+
+                  /// Form dialog for adding/editing ModuleName
+                  class ModuleNameFormDialog extends StatefulWidget {
+                    final ModuleNameEntity? item;
+                    final void Function(String name, String? description) onSave;
+
+                    const ModuleNameFormDialog({
+                      super.key,
+                      this.item,
+                      required this.onSave,
+                    });
+
+                    @override
+                    State<ModuleNameFormDialog> createState() => _ModuleNameFormDialogState();
+                  }
+
+                  class _ModuleNameFormDialogState extends State<ModuleNameFormDialog> {
+                    final _formKey = GlobalKey<FormState>();
+                    late final TextEditingController _nameController;
+                    late final TextEditingController _descriptionController;
+
+                    @override
+                    void initState() {
+                      super.initState();
+                      _nameController = TextEditingController(text: widget.item?.name ?? '');
+                      _descriptionController = TextEditingController(text: widget.item?.description ?? '');
+                    }
+
+                    @override
+                    void dispose() {
+                      _nameController.dispose();
+                      _descriptionController.dispose();
+                      super.dispose();
+                    }
+
+                    @override
+                    Widget build(BuildContext context) {
+                      final isEditing = widget.item != null;
+
+                      return AlertDialog(
+                        title: Text(isEditing ? 'Edit ModuleName' : 'Add ModuleName'),
+                        content: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextFormField(
+                                controller: _nameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Name *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Name is required';
+                                  }
+                                  return null;
+                                },
+                                autofocus: true,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _descriptionController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Description',
+                                  border: OutlineInputBorder(),
+                                ),
+                                maxLines: 3,
+                                textInputAction: TextInputAction.done,
+                              ),
+                            ],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: _handleSave,
+                            child: Text(isEditing ? 'Update' : 'Add'),
+                          ),
+                        ],
+                      );
+                    }
+
+                    void _handleSave() {
+                      if (_formKey.currentState?.validate() ?? false) {
+                        widget.onSave(
+                          _nameController.text.trim(),
+                          _descriptionController.text.trim().isEmpty 
+                              ? null 
+                              : _descriptionController.text.trim(),
+                        );
+                        Navigator.of(context).pop();
+                      }
+                    }
+                  }
+
+              - file: module_name_search_delegate.dart
+                code: |
+                  import 'package:flutter/material.dart';
+                  import 'package:flutter_riverpod/flutter_riverpod.dart';
+                  import '../../../domain/entities/entity.dart';
+                  import '../../providers/providers.dart';
+                  import '../../widgets/base_widgets.dart';
+                  import '../../widgets/shimmer_loading.dart';
+                  import 'module_name_item_tile.dart';
+
+                  /// Search delegate for ModuleName
+                  class ModuleNameSearchDelegate extends SearchDelegate<ModuleNameEntity?> {
+                    @override
+                    List<Widget> buildActions(BuildContext context) {
+                      return [
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            query = '';
+                            showSuggestions(context);
+                          },
+                        ),
+                      ];
+                    }
+
+                    @override
+                    Widget buildLeading(BuildContext context) {
+                      return IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => close(context, null),
+                      );
+                    }
+
+                    @override
+                    Widget buildResults(BuildContext context) {
+                      return _buildSearchResults(context);
+                    }
+
+                    @override
+                    Widget buildSuggestions(BuildContext context) {
+                      if (query.isEmpty) {
+                        return const Center(
+                          child: Text('Enter a search term to find ModuleName items'),
+                        );
+                      }
+                      return _buildSearchResults(context);
+                    }
+
+                    Widget _buildSearchResults(BuildContext context) {
+                      return Consumer(
+                        builder: (context, ref, child) {
+                          // Trigger search when query changes
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (query.isNotEmpty) {
+                              ref.read(searchModuleNameProvider.notifier).search(query);
+                            } else {
+                              ref.read(searchModuleNameProvider.notifier).clear();
+                            }
+                          });
+
+                          final searchState = ref.watch(searchModuleNameProvider);
+
+                          return AsyncStateBuilder<List<ModuleNameEntity>>(
+                            state: searchState,
+                            builder: (results) {
+                              if (results.isEmpty) {
+                                return const EmptyStateWidget(
+                                  title: 'No results found',
+                                  subtitle: 'Try a different search term',
+                                  icon: Icons.search_off,
+                                );
+                              }
+
+                              return ListView.builder(
+                                itemCount: results.length,
+                                itemBuilder: (context, index) {
+                                  final item = results[index];
+                                  return ModuleNameItemTile(
+                                    item: item,
+                                    onTap: () => close(context, item),
+                                  );
+                                },
+                              );
+                            },
+                            loadingBuilder: () => const ModuleNameShimmerList(itemCount: 5),
+                            emptyBuilder: () => const EmptyStateWidget(
+                              title: 'No results found',
+                              subtitle: 'Try a different search term',
+                              icon: Icons.search_off,
+                            ),
+                          );
+                        },
+                      );
+                    }
+                  }
+
+          - file: dashboard_page.dart
+            code: |
+              import 'package:flutter/material.dart';
+              import 'list_page.dart';
+              import 'simple_list_page.dart';
+
+              /// Dashboard page with navigation to different ModuleName pages
+              class ModuleNameDashboardPage extends StatelessWidget {
+                const ModuleNameDashboardPage({super.key});
+
+                @override
+                Widget build(BuildContext context) {
+                  return DefaultTabController(
+                    length: 2,
+                    child: Scaffold(
+                      appBar: AppBar(
+                        title: const Text('ModuleName Dashboard'),
+                        bottom: const TabBar(
+                          tabs: [
+                            Tab(
+                              icon: Icon(Icons.list),
+                              text: 'Paginated List',
+                            ),
+                            Tab(
+                              icon: Icon(Icons.view_list),
+                              text: 'Simple List',
+                            ),
+                          ],
+                        ),
+                      ),
+                      body: const TabBarView(
+                        children: [
+                          ModuleNameListPage(),
+                          ModuleNameSimpleListPage(),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+              }
+
+# ===== USAGE INSTRUCTIONS =====
+# 
+# To use this template:
+# 1. Replace all instances of "ModuleName" with your feature name (PascalCase)
+# 2. Replace all instances of "module_name" with your feature name (snake_case)
+# 3. Replace all instances of "NAME" with your feature name (UPPER_CASE)
+# 4. Customize the entity fields in domain/entities/entity.dart
+# 5. Implement the actual API calls in data/datasources/remote_data_source.dart
+# 6. Update the model's fromJson/toJson methods based on your API response
+# 7. Add any additional use cases you need
+# 8. Customize the UI components as needed
+#
+# Features included:
+# - Clean Architecture with proper separation of concerns
+# - Riverpod for state management
+# - Pagination support
+# - Search functionality
+# - CRUD operations with proper error handling
+# - Shimmer loading states
+# - Form validation
+# - Confirmation dialogs
+# - Empty states
+# - Fake repository for development/testing
+# - Local caching with fallback
+# - Debounced search
+# - Pull-to-refresh
+# - Infinite scroll
+# - Generic base classes for reusability
+# - Comprehensive error handling
+# - Loading states and user feedback
+# - Material Design 3 components
