@@ -39,8 +39,13 @@ String toUpperSnake(String input) => toSnakeCase(input).toUpperCase();
 void main(List<String> args) async {
   if (args.isEmpty) {
     stderr.writeln(
-      'Usage: dart run tool/generate_feature.dart ModuleName [--template path] [--out lib] [--overwrite]',
+      'Usage: dart run tool/generate_feature.dart ModuleName [--template path] [--out lib] [--overwrite] [--feature feature_name=true/false]',
     );
+    stderr.writeln('');
+    stderr.writeln('Examples:');
+    stderr.writeln('  dart run tool/generate_feature.dart User');
+    stderr.writeln('  dart run tool/generate_feature.dart Product --feature simple_mode=true');
+    stderr.writeln('  dart run tool/generate_feature.dart Order --feature inline_loading=true --feature optimistic_updates=false');
     exit(2);
   }
 
@@ -48,6 +53,7 @@ void main(List<String> args) async {
   String templatePath = 'simpler_generator_folders.yaml';
   String outBase = 'lib';
   bool overwrite = false;
+  Map<String, bool> featureOverrides = {};
 
   for (var i = 1; i < args.length; i++) {
     final arg = args[i];
@@ -57,6 +63,18 @@ void main(List<String> args) async {
       outBase = args[++i];
     } else if (arg == '--overwrite') {
       overwrite = true;
+    } else if (arg == '--feature' && i + 1 < args.length) {
+      final featureArg = args[++i];
+      final parts = featureArg.split('=');
+      if (parts.length == 2) {
+        final featureName = parts[0];
+        final featureValue = parts[1].toLowerCase() == 'true';
+        featureOverrides[featureName] = featureValue;
+        stdout.writeln('Feature override: $featureName = $featureValue');
+      } else {
+        stderr.writeln('Invalid feature format: $featureArg (expected: feature_name=true/false)');
+        exit(2);
+      }
     } else {
       stderr.writeln('Unknown argument: $arg');
       exit(2);
@@ -76,6 +94,19 @@ void main(List<String> args) async {
   final yamlString = await templateFile.readAsString();
   final doc = loadYaml(yamlString);
 
+  // Extract features configuration and apply overrides
+  final features = Map<String, dynamic>.from(doc['features'] as YamlMap? ?? YamlMap());
+  featureOverrides.forEach((key, value) {
+    features[key] = value;
+  });
+  
+  stdout.writeln('Active features:');
+  features.forEach((key, value) {
+    if (value == true) {
+      stdout.writeln('  ✓ $key');
+    }
+  });
+  
   final generate = doc['generate'];
   if (generate == null || generate is! YamlList) {
     stderr.writeln('No `generate` list found in template.');
@@ -84,6 +115,37 @@ void main(List<String> args) async {
 
   int created = 0;
   int skipped = 0;
+
+  // Helper function to process template strings with feature flags
+  String processTemplate(String template) {
+    var processed = template;
+    
+    // Replace module name placeholders
+    processed = processed.replaceAll('ModuleName', pascal);
+    processed = processed.replaceAll('module_name', snake);
+    processed = processed.replaceAll('NAME', upper);
+    
+    // Process feature flag conditionals
+    final featureRegex = RegExp(r'{%\s*if\s+features\.(\w+)\s*%}(.*?){%\s*else\s*%}(.*?){%\s*endif\s*%}', dotAll: true);
+    processed = processed.replaceAllMapped(featureRegex, (match) {
+      final featureName = match.group(1)!;
+      final trueContent = match.group(2)!;
+      final falseContent = match.group(3)!;
+      final featureEnabled = features[featureName] == true;
+      return featureEnabled ? trueContent : falseContent;
+    });
+    
+    // Process simple feature flag conditionals (without else)
+    final simpleFeatureRegex = RegExp(r'{%\s*if\s+features\.(\w+)\s*%}(.*?){%\s*endif\s*%}', dotAll: true);
+    processed = processed.replaceAllMapped(simpleFeatureRegex, (match) {
+      final featureName = match.group(1)!;
+      final content = match.group(2)!;
+      final featureEnabled = features[featureName] == true;
+      return featureEnabled ? content : '';
+    });
+    
+    return processed;
+  }
 
   // Process each top-level category
   for (final cat in generate) {
@@ -123,10 +185,8 @@ void main(List<String> args) async {
           final code = item['code'] as String? ?? '';
           final targetPath = '${currentDir.path}/$fileName';
 
-          // Replace placeholders
-          var processed = code.replaceAll('ModuleName', pascal);
-          processed = processed.replaceAll('module_name', snake);
-          processed = processed.replaceAll('NAME', upper);
+          // Process template with feature flags and placeholders
+          final processed = processTemplate(code);
 
           final targetFile = File(targetPath);
           if (await targetFile.exists() && !overwrite) {
@@ -157,9 +217,7 @@ void main(List<String> args) async {
             skipped++;
             continue;
           }
-          var processed = code.replaceAll('ModuleName', pascal);
-          processed = processed.replaceAll('module_name', snake);
-          processed = processed.replaceAll('NAME', upper);
+          final processed = processTemplate(code);
           await targetFile.writeAsString(processed);
           stdout.writeln('Created: $targetPath');
           created++;

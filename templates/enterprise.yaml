@@ -1,0 +1,40 @@
+# Enterprise Template - Full featured with all best practices
+# Usage: dart run tool/generate_feature.dart User --template templates/enterprise.yaml
+
+features:
+  # Architecture complexity
+  simple_mode: false
+  clean_architecture: true
+  
+  # UI Features
+  pagination: true
+  forms: true
+  filters: true
+  preview: true
+  shimmer_loading: true
+  
+  # Data & State Management
+  fake_repository: true
+  offline_support: true
+  optimistic_updates: true
+  stream_based: true
+  
+  # Error Handling & UX
+  advanced_error_handling: true
+  retry_mechanisms: true
+  inline_loading: true
+  toast_notifications: true
+  
+  # Development & Testing
+  generic_base_classes: true
+  mock_data_generation: true
+  unit_tests: true
+  integration_tests: true
+  
+  # Code Generation
+  asset_generation: false
+  json_serialization: true
+  equatable_support: true
+
+# This will use the full template from simpler_generator_folders.yaml
+# but with all enterprise features enabled

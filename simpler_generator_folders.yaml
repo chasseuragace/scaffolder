@@ -10,15 +10,39 @@
 
 # Configuration flags (can be toggled)
 features:
+  # Architecture complexity
+  simple_mode: false              # Generate minimal files only
+  clean_architecture: true       # Full Clean Architecture layers
+  
+  # UI Features
   pagination: true
   forms: true
   filters: true
   preview: true
   shimmer_loading: true
+  
+  # Data & State Management
   fake_repository: true
-  generic_base_classes: true
+  offline_support: false         # Local caching and sync
+  optimistic_updates: true       # Update UI immediately, revert on error
+  stream_based: false            # Use streams instead of futures
+  
+  # Error Handling & UX
   advanced_error_handling: true
+  retry_mechanisms: false        # Auto-retry failed operations
+  inline_loading: true           # Show loading states inline instead of dialogs
+  toast_notifications: false     # Use toast instead of snackbars
+  
+  # Development & Testing
+  generic_base_classes: true
+  mock_data_generation: true     # Generate realistic mock data
+  unit_tests: false              # Generate unit tests
+  integration_tests: false       # Generate integration tests
+  
+  # Code Generation
   asset_generation: false
+  json_serialization: true       # Add toJson/fromJson methods
+  equatable_support: false       # Add Equatable for value comparison
 
 generate:
   # ===== CORE LAYER =====
@@ -31,49 +55,154 @@ generate:
               // Base failure class
               abstract class Failure {
                 const Failure();
+                
+                /// User-friendly error message
+                String get message;
+                
+                /// Whether this failure can be retried
+                bool get isRetryable => false;
               }
 
               // Network-related failures
               class NetworkFailure extends Failure {
-                const NetworkFailure();
+                final int? statusCode;
+                final String? details;
+                
+                const NetworkFailure({this.statusCode, this.details});
+                
+                @override
+                String get message {
+                  if (statusCode != null) {
+                    return switch (statusCode!) {
+                      400 => 'Invalid request. Please check your input.',
+                      401 => 'Authentication required. Please log in.',
+                      403 => 'Access denied. You don\'t have permission.',
+                      404 => 'The requested resource was not found.',
+                      429 => 'Too many requests. Please try again later.',
+                      >= 500 => 'Server error. Please try again later.',
+                      _ => details ?? 'Network error occurred.',
+                    };
+                  }
+                  return details ?? 'Network connection failed.';
+                }
+                
+                @override
+                bool get isRetryable => statusCode == null || statusCode! >= 500 || statusCode == 429;
               }
 
               class ServerFailure extends Failure {
-                final String? message;
-                const ServerFailure([this.message]);
+                final String? details;
+                final int? statusCode;
+                
+                const ServerFailure({this.details, this.statusCode});
+                
+                @override
+                String get message => details ?? 'Server error occurred.';
+                
+                @override
+                bool get isRetryable => true;
               }
 
               class TimeoutFailure extends Failure {
                 const TimeoutFailure();
+                
+                @override
+                String get message => 'Request timed out. Please check your connection.';
+                
+                @override
+                bool get isRetryable => true;
               }
 
               // Data-related failures
               class CacheFailure extends Failure {
-                const CacheFailure();
+                final String? details;
+                
+                const CacheFailure([this.details]);
+                
+                @override
+                String get message => details ?? 'Local data error occurred.';
               }
 
               class ValidationFailure extends Failure {
-                final String message;
-                const ValidationFailure(this.message);
+                final Map<String, String> errors;
+                
+                const ValidationFailure(this.errors);
+                
+                @override
+                String get message {
+                  if (errors.isEmpty) return 'Validation failed.';
+                  if (errors.length == 1) return errors.values.first;
+                  return 'Please fix the following errors:\n${errors.values.join('\n')}';
+                }
+                
+                /// Get error for specific field
+                String? getFieldError(String field) => errors[field];
               }
 
               class NotFoundFailure extends Failure {
-                const NotFoundFailure();
+                final String? resource;
+                
+                const NotFoundFailure([this.resource]);
+                
+                @override
+                String get message => resource != null 
+                    ? '$resource not found.' 
+                    : 'The requested item was not found.';
               }
 
               // Permission-related failures
               class UnauthorizedFailure extends Failure {
                 const UnauthorizedFailure();
+                
+                @override
+                String get message => 'Please log in to continue.';
               }
 
               class ForbiddenFailure extends Failure {
-                const ForbiddenFailure();
+                final String? action;
+                
+                const ForbiddenFailure([this.action]);
+                
+                @override
+                String get message => action != null
+                    ? 'You don\'t have permission to $action.'
+                    : 'Access denied.';
+              }
+
+              // Connection-related failures
+              class NoInternetFailure extends Failure {
+                const NoInternetFailure();
+                
+                @override
+                String get message => 'No internet connection. Please check your network.';
+                
+                @override
+                bool get isRetryable => true;
               }
 
               // Generic failure
               class UnexpectedFailure extends Failure {
-                final String? message;
-                const UnexpectedFailure([this.message]);
+                final String? details;
+                final Exception? exception;
+                
+                const UnexpectedFailure({this.details, this.exception});
+                
+                @override
+                String get message => details ?? 'An unexpected error occurred.';
+                
+                @override
+                bool get isRetryable => true;
+              }
+
+              /// Extension to convert exceptions to failures
+              extension ExceptionToFailure on Exception {
+                Failure toFailure() {
+                  return switch (this) {
+                    FormatException() => const ValidationFailure({'format': 'Invalid data format'}),
+                    TimeoutException() => const TimeoutFailure(),
+                    _ => UnexpectedFailure(exception: this),
+                  };
+                }
               }
 
       - folder: usecases
@@ -487,15 +616,46 @@ generate:
                 }
 
                 /// Create dummy instance for testing
-                factory ModuleNameModel.dummy({String? id}) {
+                factory ModuleNameModel.dummy({String? id, int? index}) {
+                  final random = DateTime.now().millisecondsSinceEpoch + (index ?? 0);
+                  final sampleNames = [
+                    'Sample ModuleName Alpha',
+                    'Test ModuleName Beta', 
+                    'Demo ModuleName Gamma',
+                    'Mock ModuleName Delta',
+                    'Example ModuleName Epsilon',
+                  ];
+                  final sampleDescriptions = [
+                    'This is a comprehensive sample ModuleName for testing purposes',
+                    'A detailed test ModuleName with various properties',
+                    'Demo ModuleName showcasing different features',
+                    'Mock data for ModuleName with realistic content',
+                    'Example ModuleName demonstrating typical usage',
+                  ];
+                  
+                  final nameIndex = random % sampleNames.length;
+                  final descIndex = random % sampleDescriptions.length;
+                  final createdDaysAgo = random % 30;
+                  final updatedDaysAgo = random % createdDaysAgo.clamp(1, 30);
+                  
                   return ModuleNameModel(
-                    id: id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-                    name: 'Sample ModuleName',
-                    description: 'This is a sample ModuleName for testing',
-                    createdAt: DateTime.now(),
-                    updatedAt: DateTime.now(),
-                    rawJson: {},
+                    id: id ?? 'module_${random}_${nameIndex}',
+                    name: sampleNames[nameIndex],
+                    description: sampleDescriptions[descIndex],
+                    createdAt: DateTime.now().subtract(Duration(days: createdDaysAgo)),
+                    updatedAt: DateTime.now().subtract(Duration(days: updatedDaysAgo)),
+                    rawJson: {
+                      'generated': true,
+                      'index': index ?? 0,
+                      'category': ['work', 'personal', 'test', 'demo'][random % 4],
+                      'priority': ['low', 'medium', 'high'][random % 3],
+                    },
                   );
+                }
+                
+                /// Generate a list of dummy instances
+                static List<ModuleNameModel> generateDummyList(int count) {
+                  return List.generate(count, (index) => ModuleNameModel.dummy(index: index));
                 }
 
                 /// Convert to entity
@@ -1088,22 +1248,47 @@ generate:
               import 'package:flutter_riverpod/flutter_riverpod.dart';
               import '../../core/errors/failures.dart';
 
-              /// Base mixin for handling CRUD operations
+              /// Base mixin for handling CRUD operations with optimistic updates
               mixin CrudMixin on AsyncNotifier<void> {
                 Future<void> handleCrudOperation(
                   Future<Either<Failure, dynamic>> operation, {
                   ProviderBase? refreshProvider,
+                  bool showLoading = true,
+                  int maxRetries = 0,
                 }) async {
-                  state = const AsyncValue.loading();
-                  final result = await operation;
+                  if (showLoading) {
+                    state = const AsyncValue.loading();
+                  }
                   
-                  state = result.fold(
-                    (failure) => AsyncValue.error(
-                      _mapFailureToException(failure), 
-                      StackTrace.current,
-                    ),
-                    (_) => const AsyncValue.data(null),
-                  );
+                  int attempts = 0;
+                  while (attempts <= maxRetries) {
+                    final result = await operation;
+                    
+                    final newState = result.fold(
+                      (failure) {
+                        // Check if we should retry
+                        if (attempts < maxRetries && failure.isRetryable) {
+                          attempts++;
+                          return null; // Continue retry loop
+                        }
+                        return AsyncValue.error(
+                          _mapFailureToException(failure), 
+                          StackTrace.current,
+                        );
+                      },
+                      (_) => const AsyncValue.data(null),
+                    );
+                    
+                    if (newState != null) {
+                      state = newState;
+                      break;
+                    }
+                    
+                    // Wait before retry
+                    if (attempts <= maxRetries) {
+                      await Future.delayed(Duration(milliseconds: 500 * attempts));
+                    }
+                  }
                   
                   // Refresh related providers on success
                   if (!state.hasError && refreshProvider != null) {
@@ -1112,36 +1297,114 @@ generate:
                 }
 
                 Exception _mapFailureToException(Failure failure) {
-                  return switch (failure) {
-                    NetworkFailure() => Exception('Network error occurred'),
-                    ServerFailure() => Exception('Server error occurred'),
-                    TimeoutFailure() => Exception('Request timeout'),
-                    CacheFailure() => Exception('Cache error occurred'),
-                    ValidationFailure() => Exception('Validation error occurred'),
-                    NotFoundFailure() => Exception('Item not found'),
-                    UnauthorizedFailure() => Exception('Unauthorized access'),
-                    ForbiddenFailure() => Exception('Access forbidden'),
-                    UnexpectedFailure() => Exception('An unexpected error occurred'),
-                    _ => Exception('Unknown error occurred'),
-                  };
+                  return Exception(failure.message);
+                }
+              }
+
+              /// Enhanced mixin for optimistic CRUD operations
+              mixin OptimisticCrudMixin<T> on AsyncNotifier<List<T>> {
+                /// Add item optimistically
+                Future<void> addItemOptimistically(
+                  T item,
+                  Future<Either<Failure, dynamic>> operation,
+                  T Function(T) getId,
+                ) async {
+                  final currentItems = state.value ?? [];
+                  
+                  // Optimistic update
+                  state = AsyncValue.data([...currentItems, item]);
+                  
+                  final result = await operation;
+                  result.fold(
+                    (failure) {
+                      // Revert on error
+                      state = AsyncValue.data(currentItems);
+                      // You might want to show error to user here
+                    },
+                    (_) {
+                      // Success - keep the optimistic update
+                    },
+                  );
+                }
+
+                /// Update item optimistically
+                Future<void> updateItemOptimistically(
+                  T updatedItem,
+                  Future<Either<Failure, dynamic>> operation,
+                  bool Function(T, T) matcher,
+                ) async {
+                  final currentItems = state.value ?? [];
+                  final index = currentItems.indexWhere((item) => matcher(item, updatedItem));
+                  
+                  if (index == -1) return;
+                  
+                  final originalItem = currentItems[index];
+                  final newItems = [...currentItems];
+                  newItems[index] = updatedItem;
+                  
+                  // Optimistic update
+                  state = AsyncValue.data(newItems);
+                  
+                  final result = await operation;
+                  result.fold(
+                    (failure) {
+                      // Revert on error
+                      final revertedItems = [...newItems];
+                      revertedItems[index] = originalItem;
+                      state = AsyncValue.data(revertedItems);
+                    },
+                    (_) {
+                      // Success - keep the optimistic update
+                    },
+                  );
+                }
+
+                /// Delete item optimistically
+                Future<void> deleteItemOptimistically(
+                  bool Function(T) predicate,
+                  Future<Either<Failure, dynamic>> operation,
+                ) async {
+                  final currentItems = state.value ?? [];
+                  final itemToDelete = currentItems.where(predicate).firstOrNull;
+                  
+                  if (itemToDelete == null) return;
+                  
+                  // Optimistic update
+                  state = AsyncValue.data(currentItems.where((item) => !predicate(item)).toList());
+                  
+                  final result = await operation;
+                  result.fold(
+                    (failure) {
+                      // Revert on error
+                      state = AsyncValue.data(currentItems);
+                    },
+                    (_) {
+                      // Success - keep the optimistic update
+                    },
+                  );
                 }
               }
 
               /// Base class for list notifiers with common functionality
               abstract class BaseListNotifier<T> extends AsyncNotifier<List<T>> {
                 Exception mapFailureToException(Failure failure) {
-                  return switch (failure) {
-                    NetworkFailure() => Exception('Network error occurred'),
-                    ServerFailure() => Exception('Server error occurred'),
-                    TimeoutFailure() => Exception('Request timeout'),
-                    CacheFailure() => Exception('Cache error occurred'),
-                    ValidationFailure() => Exception('Validation error occurred'),
-                    NotFoundFailure() => Exception('Items not found'),
-                    UnauthorizedFailure() => Exception('Unauthorized access'),
-                    ForbiddenFailure() => Exception('Access forbidden'),
-                    UnexpectedFailure() => Exception('An unexpected error occurred'),
-                    _ => Exception('Unknown error occurred'),
-                  };
+                  return Exception(failure.message);
+                }
+                
+                /// Helper method to handle list operations with proper error handling
+                Future<void> handleListOperation(
+                  Future<Either<Failure, List<T>>> operation,
+                ) async {
+                  state = const AsyncValue.loading();
+                  final result = await operation;
+                  
+                  state = result.fold(
+                    (failure) => AsyncValue.error(
+                      mapFailureToException(failure),
+                      StackTrace.current,
+                    ),
+                    (items) => AsyncValue.data(items),
+                  );
                 }
               }
 
@@ -1742,6 +2005,8 @@ generate:
                 final Widget child;
                 final String? loadingMessage;
                 final String? successMessage;
+                final bool useInlineLoading;
+                final bool useToastNotifications;
 
                 const ModuleNameOperationListener({
                   super.key,
@@ -1749,6 +2014,8 @@ generate:
                   required this.child,
                   this.loadingMessage,
                   this.successMessage,
+                  this.useInlineLoading = {% if features.inline_loading %}true{% else %}false{% endif %},
+                  this.useToastNotifications = {% if features.toast_notifications %}true{% else %}false{% endif %},
                 });
 
                 @override
@@ -1774,8 +2041,8 @@ generate:
                     // Check if context is still mounted
                     if (!context.mounted) return;
                     
-                    // Show loading dialog
-                    if (next.isLoading && !previous.isLoading) {
+                    // Show loading dialog only if not using inline loading
+                    if (next.isLoading && !previous.isLoading && !useInlineLoading) {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
@@ -1785,39 +2052,66 @@ generate:
                     // Handle error
                     else if (next.hasError && previous.isLoading) {
                       // Safely pop dialog if navigation stack is not empty
-                      if (Navigator.of(context).canPop()) {
+                      if (!useInlineLoading && Navigator.of(context).canPop()) {
                         Navigator.of(context).pop(); // Close loading dialog
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(next.error.toString()),
-                          backgroundColor: Colors.red,
-                          behavior: SnackBarBehavior.floating,
-                          action: SnackBarAction(
-                            label: 'Dismiss',
-                            textColor: Colors.white,
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            },
-                          ),
-                        ),
-                      );
+                      
+                      final errorMessage = next.error.toString();
+                      
+                      if (useToastNotifications) {
+                        // TODO: Implement toast notifications
+                        // For now, use snackbar
+                        _showErrorSnackBar(context, errorMessage);
+                      } else {
+                        _showErrorSnackBar(context, errorMessage);
+                      }
                     }
                     // Handle success
                     else if (next.hasValue && previous.isLoading) {
                       // Safely pop dialog if navigation stack is not empty
-                      if (Navigator.of(context).canPop()) {
+                      if (!useInlineLoading && Navigator.of(context).canPop()) {
                         Navigator.of(context).pop(); // Close loading dialog
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(successMessage ?? 'Operation completed successfully'),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      
+                      final message = successMessage ?? 'Operation completed successfully';
+                      
+                      if (useToastNotifications) {
+                        // TODO: Implement toast notifications
+                        // For now, use snackbar
+                        _showSuccessSnackBar(context, message);
+                      } else {
+                        _showSuccessSnackBar(context, message);
+                      }
                     }
                   });
+                }
+                
+                void _showErrorSnackBar(BuildContext context, String message) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      action: SnackBarAction(
+                        label: 'Dismiss',
+                        textColor: Colors.white,
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        },
+                      ),
+                    ),
+                  );
+                }
+                
+                void _showSuccessSnackBar(BuildContext context, String message) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
                 }
               }
 
