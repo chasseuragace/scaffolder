@@ -5,25 +5,37 @@ import '../base/path_safety.dart';
 import '../base/tool.dart';
 
 /// Generates a Flutter feature (Clean Architecture: domain / data /
-/// presentation) and registers it in the project's feature registry.
+/// presentation) and registers it in the working project's feature
+/// registry.
 ///
-/// **Side effects:** creates files under `lib/features/<name>/` and
-/// `test/features/<name>/`, may modify `lib/core/routing/feature_registry.dart`,
-/// may overwrite existing files when `overwrite` is true.
+/// Two roots are involved and kept distinct on purpose:
+///   - `generatorRoot` is auto-detected at server startup. It's where the
+///     templates and the CLI script live. Callers do not specify this.
+///   - `output_dir` (per-call) or [defaultWorkingRoot] (server fallback)
+///     is the *working* Flutter project where files get written.
 ///
-/// Use `dry_run=true` to preview without touching the filesystem.
+/// **Side effects:** writes files under `lib/features/<name>/` and
+/// `test/features/<name>/`, and idempotently edits
+/// `lib/core/routing/feature_registry.dart`.
 class GeneratorTool implements MCPTool {
   GeneratorTool({
-    required this.defaultProjectRoot,
-    required this.defaultTemplatesDir,
+    required this.generatorRoot,
+    required this.defaultWorkingRoot,
     required this.defaultPackageName,
     PathSafety? pathSafety,
   }) : _pathSafety = pathSafety ?? PathSafety();
 
-  final String defaultProjectRoot;
-  final String defaultTemplatesDir;
+  /// Where the templates and CLI script live. Auto-detected.
+  final String generatorRoot;
+
+  /// Default working project (where output goes) when `output_dir` is omitted.
+  final String defaultWorkingRoot;
+
   final String defaultPackageName;
   final PathSafety _pathSafety;
+
+  String get _cliScript => '$generatorRoot/tool/bin/generate.dart';
+  String get _templatesDir => '$generatorRoot/templates';
 
   @override
   String get name => 'generate_feature';
@@ -31,6 +43,8 @@ class GeneratorTool implements MCPTool {
   @override
   String get description =>
       'Scaffold a Flutter CRUD feature (domain/data/presentation). '
+      'Writes files into the *working project* (output_dir or PROJECT_ROOT) '
+      'using templates from the generator\'s install location. '
       'Creates files under lib/features/<name>/ and test/features/<name>/, '
       'and registers the feature in lib/core/routing/feature_registry.dart. '
       'Use dry_run=true to preview without writing. '
@@ -73,9 +87,17 @@ class GeneratorTool implements MCPTool {
           'output_dir': {
             'type': 'string',
             'description':
-                'Project root to scaffold into. Defaults to the server\'s '
-                'PROJECT_ROOT env var. Must exist, be a directory, contain '
-                'pubspec.yaml, and (if ALLOWED_ROOT is set) reside under it.',
+                'The *working* project root to scaffold into. Defaults to '
+                'the server\'s PROJECT_ROOT env var. Must exist, be a '
+                'directory, contain pubspec.yaml, and (if ALLOWED_ROOT is '
+                'set) reside under it. NOT the generator\'s install '
+                'location — that is auto-detected.',
+          },
+          'package_name': {
+            'type': 'string',
+            'description':
+                'Flutter package name of the working project. Defaults to '
+                'the server\'s PACKAGE_NAME env var (typically `flutter_project`).',
           },
         },
         'required': ['module_name'],
@@ -92,12 +114,11 @@ class GeneratorTool implements MCPTool {
     final overwrite = (arguments['overwrite'] as bool?) ?? false;
     final dryRun = (arguments['dry_run'] as bool?) ?? false;
 
-    final projectRoot = _resolveProjectRoot(arguments);
-    final templatesDir = _resolveTemplatesDir(arguments, projectRoot);
+    final workingRoot = _resolveWorkingRoot(arguments);
     final packageName =
         (arguments['package_name'] as String?) ?? defaultPackageName;
 
-    final cliArgs = <String>['run', 'tool/bin/generate.dart', '--json'];
+    final cliArgs = <String>['run', _cliScript, '--json'];
     cliArgs.addAll([moduleName, '--preset', preset]);
     if (overwrite) cliArgs.add('--overwrite');
     if (dryRun) cliArgs.add('--dry-run');
@@ -111,14 +132,16 @@ class GeneratorTool implements MCPTool {
       }
     }
 
-    cliArgs.addAll(['--root', projectRoot]);
-    cliArgs.addAll(['--templates', templatesDir]);
+    cliArgs.addAll(['--out', workingRoot]);
+    cliArgs.addAll(['--templates', _templatesDir]);
     cliArgs.addAll(['--package', packageName]);
 
     final process = await Process.run(
       'dart',
       cliArgs,
-      workingDirectory: projectRoot,
+      // Run in the working project so any relative behaviour the CLI has
+      // (e.g. Directory.current) lines up with where files are written.
+      workingDirectory: workingRoot,
     );
 
     final stdoutText = process.stdout.toString().trim();
@@ -128,7 +151,6 @@ class GeneratorTool implements MCPTool {
     try {
       parsed = jsonDecode(stdoutText) as Map<String, dynamic>;
     } catch (_) {
-      // Generator didn't produce JSON (likely a startup failure before --json kicked in).
       throw ToolFailure(
         'generator did not produce JSON output (exit=${process.exitCode}): '
         '${stderrText.isEmpty ? stdoutText : stderrText}',
@@ -146,7 +168,8 @@ class GeneratorTool implements MCPTool {
       'module': parsed['module'],
       'preset': parsed['preset'],
       'dry_run': parsed['dry_run'],
-      'project_root': projectRoot,
+      'working_root': workingRoot,
+      'generator_root': generatorRoot,
       'created': parsed['created'],
       'overwritten': parsed['overwritten'],
       'skipped': parsed['skipped'],
@@ -158,21 +181,9 @@ class GeneratorTool implements MCPTool {
     });
   }
 
-  String _resolveProjectRoot(Map<String, dynamic> arguments) {
+  String _resolveWorkingRoot(Map<String, dynamic> arguments) {
     final raw = arguments['output_dir'] as String?;
-    if (raw == null || raw.isEmpty) return defaultProjectRoot;
+    if (raw == null || raw.isEmpty) return defaultWorkingRoot;
     return _pathSafety.validate(raw);
-  }
-
-  String _resolveTemplatesDir(
-    Map<String, dynamic> arguments,
-    String projectRoot,
-  ) {
-    final raw = arguments['templates_dir'] as String?;
-    if (raw != null && raw.isNotEmpty) return raw;
-    // If output_dir was overridden but templates_dir was not, default to
-    // <output_dir>/templates so the agent doesn't need to know the layout.
-    if (arguments.containsKey('output_dir')) return '$projectRoot/templates';
-    return defaultTemplatesDir;
   }
 }

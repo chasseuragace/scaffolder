@@ -13,29 +13,37 @@ import 'tools/validate_tool.dart';
 
 /// MCP server for the Flutter feature generator. Speaks JSON-RPC 2.0 over
 /// stdin/stdout per the MCP protocol.
+///
+/// Two roots are tracked separately:
+///   - [generatorRoot] — auto-detected; where templates + CLI live.
+///   - [defaultWorkingRoot] — the *working* project where output goes
+///                            when `output_dir` isn't supplied per call.
 class FlutterGeneratorMCPServer {
   FlutterGeneratorMCPServer({
     required this.name,
     required this.version,
-    required this.projectRoot,
-    required this.templatesDir,
+    required this.generatorRoot,
+    required this.defaultWorkingRoot,
     required this.packageName,
   }) {
     final pathSafety = PathSafety();
-    _tools['get_schema'] = SchemaTool(projectRoot: projectRoot);
-    _tools['get_presets'] = PresetsTool(projectRoot: projectRoot);
-    _tools['get_manifest'] = ManifestTool(projectRoot: projectRoot);
+    // Read-only schema/preset/manifest tools always read from the
+    // generator root — the working project doesn't own these files.
+    _tools['get_schema'] = SchemaTool(projectRoot: generatorRoot);
+    _tools['get_presets'] = PresetsTool(projectRoot: generatorRoot);
+    _tools['get_manifest'] = ManifestTool(projectRoot: generatorRoot);
+    // Read-write tools operate on the working project.
     _tools['list_features'] = ListFeaturesTool(
-      defaultProjectRoot: projectRoot,
+      defaultProjectRoot: defaultWorkingRoot,
       pathSafety: pathSafety,
     );
     _tools['validate'] = ValidateTool(
-      defaultProjectRoot: projectRoot,
+      defaultProjectRoot: defaultWorkingRoot,
       pathSafety: pathSafety,
     );
     _tools['generate_feature'] = GeneratorTool(
-      defaultProjectRoot: projectRoot,
-      defaultTemplatesDir: templatesDir,
+      generatorRoot: generatorRoot,
+      defaultWorkingRoot: defaultWorkingRoot,
       defaultPackageName: packageName,
       pathSafety: pathSafety,
     );
@@ -43,23 +51,28 @@ class FlutterGeneratorMCPServer {
 
   final String name;
   final String version;
-  final String projectRoot;
-  final String templatesDir;
+
+  /// Where the generator's templates + CLI live. Auto-detected.
+  final String generatorRoot;
+
+  /// Where files get written when the caller doesn't override.
+  final String defaultWorkingRoot;
+
   final String packageName;
   final Map<String, MCPTool> _tools = {};
 
   Future<void> start() async {
     stderr.writeln('flutter-generator-mcp v$version');
-    stderr.writeln('  project_root: $projectRoot');
-    stderr.writeln('  templates:    $templatesDir');
-    stderr.writeln('  package:      $packageName');
-    stderr.writeln('  tools:        ${_tools.keys.join(", ")}');
+    stderr.writeln('  generator_root:      $generatorRoot   (auto-detected)');
+    stderr.writeln('  default_working_root: $defaultWorkingRoot');
+    stderr.writeln('  default_package:     $packageName');
+    stderr.writeln('  tools:               ${_tools.keys.join(", ")}');
     final allowed = Platform.environment['ALLOWED_ROOT'];
     if (allowed != null && allowed.isNotEmpty) {
-      stderr.writeln('  allowed_root: $allowed');
+      stderr.writeln('  allowed_root:        $allowed');
     } else {
-      stderr.writeln('  allowed_root: (unset — output_dir confined only by '
-          'PROJECT_ROOT default)');
+      stderr.writeln('  allowed_root:        (unset — output_dir is '
+          'unconstrained beyond pubspec.yaml sanity check)');
     }
 
     stdin

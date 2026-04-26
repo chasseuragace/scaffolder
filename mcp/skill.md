@@ -3,6 +3,21 @@
 MCP server that lets an AI IDE scaffold Flutter Clean-Architecture features.
 Speaks JSON-RPC 2.0 over stdin/stdout. Pure Dart, zero runtime dependencies.
 
+## Two roots, kept distinct on purpose
+
+This is the most important mental model when wiring the server up:
+
+| Root | Who specifies it | What it is |
+|---|---|---|
+| **generator root** | the server, via auto-detect (or `GENERATOR_ROOT` env) | where the templates, schema, and CLI script live. The caller never specifies this. |
+| **working root** | the *caller* per-tool-call (`output_dir`), or the server's `PROJECT_ROOT` env as default | the user's Flutter project — where scaffolded files end up. |
+
+Today these often coincide in self-hosted demos. They diverge the moment
+you install the server at `/opt/flutter-generator/` and point it at
+`~/code/customer-portal/`. The schema/preset tools always read from the
+generator root; the `generate_feature` / `list_features` / `validate`
+tools always operate on the working root.
+
 ## Why this server is shaped the way it is
 
 This generator is unusually well-suited to AI agents:
@@ -118,25 +133,37 @@ makes sense):
 
 | Var | Default | What it does |
 |---|---|---|
-| `PROJECT_ROOT` | parent dir | Default project to scaffold into when `output_dir` is omitted. |
-| `TEMPLATES_DIR` | `<PROJECT_ROOT>/templates` | Where the templates live. |
-| `PACKAGE_NAME` | `flutter_project` | Used by the registry import paths. |
-| `ALLOWED_ROOT` | *(unset)* | If set, every `output_dir` must reside under this path. **Recommended in shared / multi-project setups.** |
+| `GENERATOR_ROOT` | auto-detected from server install | Where the templates + CLI live. Auto-detection walks up from `Platform.script` looking for `templates/schema.yaml`. Set this only if auto-detection fails (e.g. unusual install layout). |
+| `PROJECT_ROOT` | current directory | **Default working project** — where scaffolded files go when `output_dir` is omitted. |
+| `PACKAGE_NAME` | `flutter_project` | Default Flutter package name of the working project. |
+| `ALLOWED_ROOT` | *(unset)* | If set, every per-call `output_dir` must reside under this path. **Recommended in shared / multi-project setups.** |
 
-CLI flags `--project-root`, `--templates-dir`, `--package-name`
-mirror the env vars.
+CLI flags `--generator-root`, `--working-root` (a.k.a. `--project-root`),
+`--package-name` mirror the env vars.
 
 ## Wiring it into an AI IDE
+
+The server install location and the user's working project can be
+completely different directories. The server auto-detects its own
+templates; the caller specifies the working project per call.
 
 ```jsonc
 {
   "mcpServers": {
     "flutter-generator": {
       "command": "dart",
-      "args": ["run", "/abs/path/to/flutter_project/mcp/bin/main.dart"],
+      "args": [
+        "run",
+        // generator install location — server reads templates from here.
+        "/opt/flutter-generator/mcp/bin/main.dart"
+      ],
       "env": {
-        "PROJECT_ROOT": "/abs/path/to/flutter_project",
-        "ALLOWED_ROOT": "/abs/path/to/code"
+        // OPTIONAL: a default working project. The agent can override
+        // any tool call with output_dir to scaffold elsewhere.
+        "PROJECT_ROOT": "/Users/me/code/current-project",
+        // STRONGLY RECOMMENDED: confine output_dir to a parent directory
+        // so an agent can't accidentally scaffold into your $HOME.
+        "ALLOWED_ROOT": "/Users/me/code"
       }
     }
   }
@@ -147,12 +174,13 @@ mirror the env vars.
 
 ```
 mcp/
-├── bin/main.dart              # CLI entry: env+args -> server.start()
+├── bin/main.dart              # CLI entry: resolves generator_root + working_root, then server.start()
 ├── lib/
 │   ├── server.dart            # JSON-RPC dispatcher, tool registry
 │   ├── base/
 │   │   ├── tool.dart          # MCPTool interface + ToolFailure exception
 │   │   ├── path_safety.dart   # output_dir validator (exists, pubspec, ALLOWED_ROOT)
+│   │   ├── generator_root.dart # auto-detects templates/schema.yaml + tool/bin/generate.dart
 │   │   └── yaml_parser.dart   # minimal YAML reader for schema/manifest/presets
 │   └── tools/
 │       ├── schema_tool.dart       # get_schema       (structured JSON)

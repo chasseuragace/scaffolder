@@ -6,6 +6,12 @@ import '../src/generator.dart';
 const _usage = '''
 Flutter feature generator.
 
+Two distinct roots are involved and kept separate on purpose:
+  - generator root: where the templates + this script live (auto-detected
+                    from the script location; override with --templates)
+  - working root:   where files are written (defaults to the current
+                    directory; override with --out / --root)
+
 Usage:
   dart run tool/bin/generate.dart <ModuleName> [options]
   dart run tool/bin/generate.dart --core-only [options]
@@ -16,19 +22,37 @@ Options:
   --overwrite              Overwrite existing files (incl. one-shot core files).
   --dry-run                Report what would be written without touching the filesystem.
   --json                   Emit a structured JSON report on stdout (for tools/IDEs).
-  --templates <path>       Templates directory. Default: templates.
-  --root <path>            Project root. Default: current directory.
-  --package <name>         Package name. Default: flutter_project.
+  --templates <path>       Templates directory. Default: auto-detected from script location.
+  --out <path>             Working project root (where files are written). Default: current directory.
+  --root <path>            Alias for --out.
+  --package <name>         Flutter package name of the working project. Default: flutter_project.
   --core-only              Generate only one-shot core files; skip per-feature.
   -h, --help               Show this message.
 
 Examples:
   dart run tool/bin/generate.dart User
   dart run tool/bin/generate.dart Order --preset enterprise
-  dart run tool/bin/generate.dart Product --feature pagination=false
-  dart run tool/bin/generate.dart --core-only
+  dart run tool/bin/generate.dart Product --feature pagination=false --out /path/to/my-app
+  dart run tool/bin/generate.dart --core-only --out /path/to/new-project
   dart run tool/bin/generate.dart Invoice --dry-run --json
 ''';
+
+/// Walks up from the script location until a directory containing
+/// `templates/schema.yaml` is found. That directory is the generator root.
+/// Returns the templates path, or null if it can't be located.
+String? _autoDetectTemplatesDir() {
+  try {
+    var dir = File.fromUri(Platform.script).parent;
+    for (var i = 0; i < 8; i++) {
+      final candidate = '${dir.path}/templates/schema.yaml';
+      if (File(candidate).existsSync()) return '${dir.path}/templates';
+      final parent = dir.parent;
+      if (parent.path == dir.path) break;
+      dir = parent;
+    }
+  } catch (_) {}
+  return null;
+}
 
 void main(List<String> argv) {
   String? moduleInput;
@@ -37,7 +61,7 @@ void main(List<String> argv) {
   var coreOnly = false;
   var dryRun = false;
   var jsonOutput = false;
-  var templatesDir = 'templates';
+  String? templatesDir;
   var projectRoot = Directory.current.path;
   var packageName = 'flutter_project';
   final overrides = <String, bool>{};
@@ -69,6 +93,7 @@ void main(List<String> argv) {
         jsonOutput = true;
       case '--templates':
         templatesDir = next();
+      case '--out':
       case '--root':
         projectRoot = next();
       case '--package':
@@ -105,11 +130,18 @@ void main(List<String> argv) {
     exit(2);
   }
 
-  // Allow absolute --templates paths (e.g. when the wrapper passes a fully
-  // qualified directory). Relative paths resolve under projectRoot.
-  final resolvedTemplatesDir = templatesDir.startsWith('/')
-      ? templatesDir
-      : '$projectRoot/$templatesDir';
+  // Resolve the templates dir. Order: explicit --templates flag > auto-detect
+  // from the script location > relative `templates/` under the working dir
+  // (the legacy self-hosted layout).
+  final String resolvedTemplatesDir;
+  if (templatesDir != null) {
+    resolvedTemplatesDir = templatesDir.startsWith('/')
+        ? templatesDir
+        : '$projectRoot/$templatesDir';
+  } else {
+    resolvedTemplatesDir =
+        _autoDetectTemplatesDir() ?? '$projectRoot/templates';
+  }
 
   final gen = Generator(
     projectRoot: projectRoot,
