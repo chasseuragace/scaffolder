@@ -1,0 +1,19 @@
+name: flutter_feature_generator
+description: >-
+  Opinionated code generator for Flutter Clean-Architecture features.
+  Pure Dart — no Flutter runtime dependency. Templates live under templates/
+  and are rendered with mustache-style placeholders + line-marker conditionals.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  yaml: ^3.1.0
+
+dev_dependencies:
+  test: ^1.25.15
+  lints: ^5.0.0

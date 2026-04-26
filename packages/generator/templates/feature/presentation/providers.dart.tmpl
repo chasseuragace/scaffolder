@@ -1,0 +1,231 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// #if features.pagination
+import '../../../../core/pagination/pagination.dart';
+// #endif
+import '../../domain/entities/{{module_snake}}_entity.dart';
+import '../../domain/repositories/{{module_snake}}_repository.dart';
+// #if features.fake_repository
+import '../../data/repositories/{{module_snake}}_repository_fake.dart';
+// #else
+import '../../data/repositories/{{module_snake}}_repository_impl.dart';
+// #endif
+
+/// Single source of truth for the {{Module}} repository. Override this
+/// provider in tests or production wiring.
+final {{module}}RepositoryProvider = Provider<{{Module}}Repository>((ref) {
+  // #if features.fake_repository
+  return {{Module}}RepositoryFake.seeded();
+  // #else
+  return const {{Module}}RepositoryImpl();
+  // #endif
+});
+
+// #if features.pagination
+/// True while there are more pages available. Read this from widgets that
+/// render a "load more" affordance; the list notifier keeps it up to date.
+final {{module}}HasMoreProvider = StateProvider<bool>((ref) => false);
+
+const _{{module}}PageSize = 20;
+// #endif
+
+/// Surfaced when a mutation (add/edit/remove) fails. The list state itself
+/// is rolled back to its pre-mutation value so the page stays usable; this
+/// provider lets the UI show transient feedback (e.g. a SnackBar) without
+/// putting the whole page into an error state. Reset to null after handling.
+final {{module}}MutationErrorProvider = StateProvider<Object?>((ref) => null);
+
+// #if features.success_feedback
+/// Names which mutation succeeded — `'add'`, `'edit'`, or `'remove'`.
+/// The list page listens to this and shows a brief confirmation SnackBar.
+/// Reset to null after handling.
+final {{module}}MutationSuccessProvider = StateProvider<String?>((ref) => null);
+// #endif
+
+/// Single-entity fetch used by the details page. Family-keyed on entity id;
+/// `autoDispose` so closing the details page releases the cache.
+final {{module}}ByIdProvider = FutureProvider.autoDispose
+    .family<{{Module}}Entity, String>((ref, id) async {
+  final repo = ref.read({{module}}RepositoryProvider);
+  final result = await repo.getById(id);
+  return result.fold((f) => throw f, (e) => e);
+});
+
+/// Async list state with optimistic mutations.
+class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
+  {{Module}}Repository get _repo => ref.read({{module}}RepositoryProvider);
+
+  void _emitMutationError(Object error) =>
+      ref.read({{module}}MutationErrorProvider.notifier).state = error;
+
+  // #if features.success_feedback
+  void _emitMutationSuccess(String op) =>
+      ref.read({{module}}MutationSuccessProvider.notifier).state = op;
+  // #else
+  void _emitMutationSuccess(String op) {}
+  // #endif
+
+  // #if features.pagination
+  bool _loadingMore = false;
+
+  Future<List<{{Module}}Entity>> _fetchInitial() async {
+    final result = await _repo.getAllPaginated(
+      const PaginationParams(offset: 0, limit: _{{module}}PageSize),
+    );
+    return result.fold((f) => throw f, (page) {
+      ref.read({{module}}HasMoreProvider.notifier).state = page.hasMore;
+      return page.items;
+    });
+  }
+  // #else
+  Future<List<{{Module}}Entity>> _fetchInitial() async {
+    final result = await _repo.getAll();
+    return result.fold((f) => throw f, (l) => l);
+  }
+  // #endif
+
+  @override
+  Future<List<{{Module}}Entity>> build() async {
+    return _fetchInitial();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_fetchInitial);
+  }
+
+  // #if features.pagination
+  /// Appends the next page if one is available. Safe to call repeatedly —
+  /// returns immediately when already loading or fully loaded.
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (_loadingMore) return;
+    if (!ref.read({{module}}HasMoreProvider)) return;
+    _loadingMore = true;
+    final result = await _repo.getAllPaginated(
+      PaginationParams(offset: current.length, limit: _{{module}}PageSize),
+    );
+    _loadingMore = false;
+    result.fold(
+      _emitMutationError,
+      (page) {
+        ref.read({{module}}HasMoreProvider.notifier).state = page.hasMore;
+        state = AsyncData([...current, ...page.items]);
+      },
+    );
+  }
+  // #endif
+
+  Future<void> add({{Module}}Entity entity) async {
+    final previous = state.valueOrNull ?? <{{Module}}Entity>[];
+    // #if features.optimistic_updates
+    final tempId = entity.id.isEmpty
+        ? 'tmp_${DateTime.now().microsecondsSinceEpoch}'
+        : entity.id;
+    final optimistic = entity.copyWith(id: tempId);
+    state = AsyncData([...previous, optimistic]);
+
+    final result = await _repo.add(entity);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        _emitMutationError(f);
+      },
+      (created) {
+        state = AsyncData([
+          for (final e in state.valueOrNull ?? <{{Module}}Entity>[])
+            if (e.id == tempId) created else e,
+        ]);
+        _emitMutationSuccess('add');
+      },
+    );
+    // #else
+    final result = await _repo.add(entity);
+    result.fold(
+      _emitMutationError,
+      (created) {
+        state = AsyncData([...previous, created]);
+        _emitMutationSuccess('add');
+      },
+    );
+    // #endif
+  }
+
+  Future<void> edit({{Module}}Entity entity) async {
+    final previous = state.valueOrNull ?? <{{Module}}Entity>[];
+    // #if features.optimistic_updates
+    state = AsyncData([
+      for (final e in previous) if (e.id == entity.id) entity else e,
+    ]);
+
+    final result = await _repo.update(entity);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        _emitMutationError(f);
+      },
+      (saved) {
+        state = AsyncData([
+          for (final e in state.valueOrNull ?? <{{Module}}Entity>[])
+            if (e.id == saved.id) saved else e,
+        ]);
+        _emitMutationSuccess('edit');
+      },
+    );
+    // #else
+    final result = await _repo.update(entity);
+    result.fold(
+      _emitMutationError,
+      (saved) {
+        state = AsyncData([
+          for (final e in previous) if (e.id == saved.id) saved else e,
+        ]);
+        _emitMutationSuccess('edit');
+      },
+    );
+    // #endif
+  }
+
+  Future<void> remove(String id) async {
+    final previous = state.valueOrNull ?? <{{Module}}Entity>[];
+    // #if features.optimistic_updates
+    state = AsyncData(previous.where((e) => e.id != id).toList());
+
+    final result = await _repo.delete(id);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        _emitMutationError(f);
+      },
+      (_) {
+        _emitMutationSuccess('remove');
+      },
+    );
+    // #else
+    final result = await _repo.delete(id);
+    result.fold(
+      _emitMutationError,
+      (_) {
+        state = AsyncData(previous.where((e) => e.id != id).toList());
+        _emitMutationSuccess('remove');
+      },
+    );
+    // #endif
+  }
+}
+
+final {{module}}ListProvider =
+    AsyncNotifierProvider<{{Module}}ListNotifier, List<{{Module}}Entity>>(
+  {{Module}}ListNotifier.new,
+);
+
+// #if features.search
+/// Search results provider, family-keyed on the query string.
+final {{module}}SearchProvider = FutureProvider.autoDispose
+    .family<List<{{Module}}Entity>, String>((ref, query) async {
+  final repo = ref.read({{module}}RepositoryProvider);
+  final result = await repo.search(query);
+  return result.fold((f) => throw f, (l) => l);
+});
+// #endif

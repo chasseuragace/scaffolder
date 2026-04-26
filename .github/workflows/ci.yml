@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  flutter:
-    name: Flutter — analyze + test
+  example_app:
+    name: Example app — analyze + test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,14 +17,38 @@ jobs:
           channel: stable
           cache: true
 
-      - name: flutter pub get
+      - name: flutter pub get (workspace)
+        working-directory: packages/example_app
         run: flutter pub get
 
       - name: flutter analyze
+        working-directory: packages/example_app
         run: flutter analyze --fatal-infos --fatal-warnings
 
       - name: flutter test
+        working-directory: packages/example_app
         run: flutter test --reporter expanded
+
+  generator:
+    name: Generator — analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: dart pub get (workspace)
+        run: dart pub get
+
+      - name: dart analyze (generator)
+        working-directory: packages/generator
+        run: dart analyze --fatal-infos --fatal-warnings
+
+      - name: dart test (generator)
+        working-directory: packages/generator
+        run: dart test --reporter expanded
 
   mcp:
     name: MCP wrapper — analyze + test
@@ -36,22 +60,13 @@ jobs:
         with:
           sdk: stable
 
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: dart pub get (mcp)
-        working-directory: mcp
+      - name: dart pub get (workspace)
         run: dart pub get
 
-      - name: dart pub get (root, for the embedded CLI)
-        run: flutter pub get
-
       - name: dart analyze (mcp)
-        working-directory: mcp
+        working-directory: packages/generator_mcp
         run: dart analyze --fatal-infos --fatal-warnings
 
       - name: dart test (mcp)
-        working-directory: mcp
+        working-directory: packages/generator_mcp
         run: dart test --reporter expanded

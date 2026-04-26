@@ -1,0 +1,18 @@
+import 'package:flutter/material.dart';
+
+import '../../core/routing/feature_registry.dart';
+import 'presentation/pages/{{module_snake}}_list_page.dart';
+
+/// Public surface for the {{Module}} feature. Imported by the feature
+/// registry; do not import from outside this module otherwise.
+class {{Module}}Module {
+  static const FeatureDescriptor descriptor = FeatureDescriptor(
+    id: '{{module_snake}}',
+    title: '{{Module}}s',
+    routeName: '/{{module-kebab}}',
+    icon: Icons.list_alt,
+    builder: _build,
+  );
+
+  static Widget _build(BuildContext context) => const {{Module}}ListPage();
+}
