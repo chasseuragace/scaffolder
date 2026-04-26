@@ -11,28 +11,30 @@ rewrite. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Repo layout
 
-This is a Dart workspace with three packages, each with a clear job:
-
 ```
 packages/
-├── generator/        — the product: engine + CLI + templates (pure Dart, no Flutter)
-├── generator_mcp/    — MCP server wrapping the generator for AI IDEs
-└── example_app/      — the Flutter playground that consumes generated code
+├── generator/        — engine + CLI + templates  (pure Dart, no Flutter)   ← workspace
+├── generator_mcp/    — MCP server for AI IDEs    (pure Dart, no Flutter)   ← workspace
+└── example_app/      — Flutter playground that consumes generator output   ← standalone
 ```
 
-Top-level `pubspec.yaml` declares the workspace; one `dart pub get` at
-root resolves all three packages.
+The dev tools (`generator` and `generator_mcp`) form a Dart workspace —
+one `dart pub get` at repo root resolves both, and `dart test` works
+without a Flutter SDK installed.
+
+The example app is a normal Flutter project. It has its own `pubspec.yaml`
+and is driven by `flutter pub` like any other Flutter codebase.
 
 ## Quick start
 
 ```bash
-# from the workspace root
+# 1. Resolve the dev tools (pure Dart, no Flutter SDK required)
 dart pub get
 
-# scaffold a feature into the example app
+# 2. Scaffold a feature into the example app
 dart run packages/generator/bin/generate.dart Invoice --out packages/example_app
 
-# run it
+# 3. Run the Flutter app
 cd packages/example_app
 flutter pub get
 flutter analyze && flutter test
@@ -80,4 +82,4 @@ layout — point it at any working project and it scaffolds there.
 
 ## CI
 
-`.github/workflows/ci.yml` runs three jobs on every push and PR — generator (`dart analyze` + `dart test`), generator_mcp (`dart analyze` + `dart test`, including the integration test that pipes JSON-RPC at the server), example_app (`flutter analyze --fatal-infos --fatal-warnings` + `flutter test`).
+`.github/workflows/ci.yml` runs three jobs on every push and PR. The two pure-Dart jobs (`generator`, `generator_mcp`) don't install Flutter — they boot in seconds. The `example_app` job installs Flutter and runs the full app pipeline (`flutter analyze --fatal-infos --fatal-warnings` + `flutter test`).

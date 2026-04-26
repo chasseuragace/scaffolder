@@ -1,10 +1,14 @@
 name: flutter_feature_generator_workspace
 publish_to: none
 description: >-
-  Workspace root for the Flutter feature generator. Three packages:
-    - packages/generator      — the generator engine + CLI + templates
-    - packages/generator_mcp  — MCP server wrapper for AI IDEs
-    - packages/example_app    — the Flutter playground that consumes generator output
+  Workspace root for the Flutter feature generator dev tools.
+
+  The workspace contains the pure-Dart packages only — the engine and the
+  MCP wrapper. The example Flutter app (packages/example_app/) is a
+  *consumer* of generator output, not an internal sibling, so it stands
+  alone with its own pubspec / lockfile and is driven by `flutter pub`.
+  This keeps the workspace dev loop fast (no Flutter SDK required) and
+  matches Flutter users' expectations for the example project.
 
 environment:
   sdk: ^3.6.0
@@ -12,4 +16,3 @@ environment:
 workspace:
   - packages/generator
   - packages/generator_mcp
-  - packages/example_app
