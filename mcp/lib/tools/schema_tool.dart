@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:yaml/yaml.dart';
+
 import '../base/tool.dart';
-import '../base/yaml_parser.dart';
 
 /// Returns the canonical feature-flag schema as structured JSON.
 ///
@@ -37,16 +38,16 @@ class SchemaTool implements MCPTool {
       throw ToolFailure('schema.yaml not found at $path');
     }
 
-    final doc = parseYaml(file.readAsStringSync());
-    if (doc is! Map) {
+    final doc = loadYaml(file.readAsStringSync());
+    if (doc is! YamlMap) {
       throw ToolFailure('schema.yaml is not a mapping at the root');
     }
 
     final flagsNode = doc['flags'];
     final flags = <Map<String, dynamic>>[];
-    if (flagsNode is Map) {
+    if (flagsNode is YamlMap) {
       flagsNode.forEach((name, def) {
-        if (def is Map) {
+        if (def is YamlMap) {
           flags.add({
             'name': name,
             'default': def['default'],
@@ -58,14 +59,29 @@ class SchemaTool implements MCPTool {
 
     final conflicts = <Map<String, dynamic>>[];
     final conflictsNode = doc['conflicts'];
-    if (conflictsNode is List) {
+    if (conflictsNode is YamlList) {
       for (final entry in conflictsNode) {
-        if (entry is Map) {
-          conflicts.add(Map<String, dynamic>.from(entry));
+        if (entry is YamlMap) {
+          conflicts.add(_yamlToJson(entry) as Map<String, dynamic>);
         }
       }
     }
 
     return jsonEncode({'flags': flags, 'conflicts': conflicts});
   }
+}
+
+/// Recursively converts YamlMap/YamlList to plain `Map<String, dynamic>` /
+/// `List` so the result survives `jsonEncode`.
+dynamic _yamlToJson(dynamic node) {
+  if (node is YamlMap) {
+    return {
+      for (final entry in node.entries)
+        entry.key.toString(): _yamlToJson(entry.value),
+    };
+  }
+  if (node is YamlList) {
+    return [for (final item in node) _yamlToJson(item)];
+  }
+  return node;
 }

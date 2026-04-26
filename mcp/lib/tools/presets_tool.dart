@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:yaml/yaml.dart';
+
 import '../base/tool.dart';
-import '../base/yaml_parser.dart';
 
 /// Returns available presets and the flag values each one sets — as
 /// structured JSON so an AI agent can pick the closest preset to a
@@ -37,9 +38,13 @@ class PresetsTool implements MCPTool {
     for (final entity in dir.listSync()) {
       if (entity is File && entity.path.endsWith('.yaml')) {
         final name = entity.uri.pathSegments.last.replaceAll('.yaml', '');
-        final doc = parseYaml(entity.readAsStringSync());
-        final features = (doc is Map && doc['features'] is Map)
-            ? Map<String, dynamic>.from(doc['features'] as Map)
+        final doc = loadYaml(entity.readAsStringSync());
+        final featuresNode = (doc is YamlMap) ? doc['features'] : null;
+        final features = (featuresNode is YamlMap)
+            ? <String, dynamic>{
+                for (final e in featuresNode.entries)
+                  e.key.toString(): e.value,
+              }
             : <String, dynamic>{};
         presets[name] = {'features': features};
       }

@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:yaml/yaml.dart';
+
 import '../base/tool.dart';
-import '../base/yaml_parser.dart';
 
 /// Returns the template manifest (which templates write to which paths,
 /// and under which flag-gates) as structured JSON.
@@ -36,14 +37,14 @@ class ManifestTool implements MCPTool {
     if (!file.existsSync()) {
       throw ToolFailure('manifest.yaml not found at $path');
     }
-    final doc = parseYaml(file.readAsStringSync());
-    if (doc is! Map) {
+    final doc = loadYaml(file.readAsStringSync());
+    if (doc is! YamlMap) {
       throw ToolFailure('manifest.yaml is not a mapping at the root');
     }
 
     List<Map<String, dynamic>> normalize(dynamic node) {
-      if (node is! List) return const [];
-      return node.whereType<Map>().map((m) {
+      if (node is! YamlList) return const [];
+      return node.whereType<YamlMap>().map((m) {
         return {
           'template': m['template'],
           'output': m['output'],
