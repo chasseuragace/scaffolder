@@ -31,6 +31,9 @@ core:
     output: lib/core/routing/feature_registry.dart
     once: true
     preserve: true
+  - template: core/failure_messages.dart.tmpl
+    output: lib/core/errors/failure_messages.dart
+    once: true
   - template: core/pagination.dart.tmpl
     output: lib/core/pagination/pagination.dart
     once: true

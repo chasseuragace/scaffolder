@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/failure_messages.dart';
 import '../../../../core/widgets/empty_view.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/shimmer_tile.dart';
@@ -44,6 +45,26 @@ class _UserListPageState extends ConsumerState<UserListPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(userListProvider);
     final hasMore = ref.watch(userHasMoreProvider);
+
+    // Mutation feedback: surface failed add/edit/remove as a SnackBar
+    // without dropping the whole page into an error state.
+    ref.listen<Object?>(userMutationErrorProvider, (_, error) {
+      if (error == null) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(failureToMessage(error)),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              onPressed: () => messenger.hideCurrentSnackBar(),
+            ),
+          ),
+        );
+      ref.read(userMutationErrorProvider.notifier).state = null;
+    });
 
     return Scaffold(
       appBar: AppBar(

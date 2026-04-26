@@ -61,20 +61,37 @@ class OrderModel {
     'Demo Order Gamma',
     'Mock Order Delta',
     'Example Order Epsilon',
+    'Premium Order Zeta',
+    'Advanced Order Eta',
+    'Professional Order Theta',
+    'Enterprise Order Iota',
+    'Ultimate Order Kappa',
   ];
   static const List<String> _descriptions = [
-    'A first sample for Order',
-    'A second sample for Order',
-    'A third sample for Order',
+    'A first sample for Order with realistic content',
+    'A second sample showcasing varied properties',
+    'A third sample demonstrating typical usage',
+    'A fourth sample with extended detail and context',
+    'A fifth sample exercising the longer-form layout',
+  ];
+  static const List<String> _categories = [
+    'work',
+    'personal',
+    'archived',
+    'pinned',
+    'draft',
   ];
 
-  /// Deterministic dummy. Pass [seed] for reproducible variety.
+  /// Deterministic dummy. Pass [seed] for reproducible variety. The
+  /// description includes a category tag so the variety surfaces in
+  /// list rendering.
   factory OrderModel.dummy({String? id, int seed = 0}) {
     final s = seed.abs();
+    final category = _categories[s % _categories.length];
     return OrderModel(
       id: id ?? 'order_$s',
       name: _names[s % _names.length],
-      description: _descriptions[s % _descriptions.length],
+      description: '${_descriptions[s % _descriptions.length]} [$category]',
       createdAt: DateTime(2024, 1, 1).add(Duration(days: s % 365)),
       updatedAt: DateTime(2024, 1, 1).add(Duration(days: (s % 365) + 1)),
     );

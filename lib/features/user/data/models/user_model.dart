@@ -61,20 +61,37 @@ class UserModel {
     'Demo User Gamma',
     'Mock User Delta',
     'Example User Epsilon',
+    'Premium User Zeta',
+    'Advanced User Eta',
+    'Professional User Theta',
+    'Enterprise User Iota',
+    'Ultimate User Kappa',
   ];
   static const List<String> _descriptions = [
-    'A first sample for User',
-    'A second sample for User',
-    'A third sample for User',
+    'A first sample for User with realistic content',
+    'A second sample showcasing varied properties',
+    'A third sample demonstrating typical usage',
+    'A fourth sample with extended detail and context',
+    'A fifth sample exercising the longer-form layout',
+  ];
+  static const List<String> _categories = [
+    'work',
+    'personal',
+    'archived',
+    'pinned',
+    'draft',
   ];
 
-  /// Deterministic dummy. Pass [seed] for reproducible variety.
+  /// Deterministic dummy. Pass [seed] for reproducible variety. The
+  /// description includes a category tag so the variety surfaces in
+  /// list rendering.
   factory UserModel.dummy({String? id, int seed = 0}) {
     final s = seed.abs();
+    final category = _categories[s % _categories.length];
     return UserModel(
       id: id ?? 'user_$s',
       name: _names[s % _names.length],
-      description: _descriptions[s % _descriptions.length],
+      description: '${_descriptions[s % _descriptions.length]} [$category]',
       createdAt: DateTime(2024, 1, 1).add(Duration(days: s % 365)),
       updatedAt: DateTime(2024, 1, 1).add(Duration(days: (s % 365) + 1)),
     );

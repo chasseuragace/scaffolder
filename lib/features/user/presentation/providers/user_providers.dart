@@ -17,9 +17,18 @@ final userHasMoreProvider = StateProvider<bool>((ref) => false);
 
 const _userPageSize = 20;
 
+/// Surfaced when a mutation (add/edit/remove) fails. The list state itself
+/// is rolled back to its pre-mutation value so the page stays usable; this
+/// provider lets the UI show transient feedback (e.g. a SnackBar) without
+/// putting the whole page into an error state. Reset to null after handling.
+final userMutationErrorProvider = StateProvider<Object?>((ref) => null);
+
 /// Async list state with optimistic mutations.
 class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
   UserRepository get _repo => ref.read(userRepositoryProvider);
+
+  void _emitMutationError(Object error) =>
+      ref.read(userMutationErrorProvider.notifier).state = error;
 
   bool _loadingMore = false;
 
@@ -56,9 +65,7 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
     );
     _loadingMore = false;
     result.fold(
-      (_) {
-        // Keep existing data on error; surface via a separate channel if needed.
-      },
+      _emitMutationError,
       (page) {
         ref.read(userHasMoreProvider.notifier).state = page.hasMore;
         state = AsyncData([...current, ...page.items]);
@@ -78,14 +85,13 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (created) {
-        final next = [
+        state = AsyncData([
           for (final e in state.valueOrNull ?? <UserEntity>[])
             if (e.id == tempId) created else e,
-        ];
-        state = AsyncData(next);
+        ]);
       },
     );
   }
@@ -100,7 +106,7 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (saved) {
         state = AsyncData([
@@ -119,7 +125,7 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (_) {},
     );

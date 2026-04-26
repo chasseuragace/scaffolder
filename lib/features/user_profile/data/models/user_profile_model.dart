@@ -61,20 +61,37 @@ class UserProfileModel {
     'Demo UserProfile Gamma',
     'Mock UserProfile Delta',
     'Example UserProfile Epsilon',
+    'Premium UserProfile Zeta',
+    'Advanced UserProfile Eta',
+    'Professional UserProfile Theta',
+    'Enterprise UserProfile Iota',
+    'Ultimate UserProfile Kappa',
   ];
   static const List<String> _descriptions = [
-    'A first sample for UserProfile',
-    'A second sample for UserProfile',
-    'A third sample for UserProfile',
+    'A first sample for UserProfile with realistic content',
+    'A second sample showcasing varied properties',
+    'A third sample demonstrating typical usage',
+    'A fourth sample with extended detail and context',
+    'A fifth sample exercising the longer-form layout',
+  ];
+  static const List<String> _categories = [
+    'work',
+    'personal',
+    'archived',
+    'pinned',
+    'draft',
   ];
 
-  /// Deterministic dummy. Pass [seed] for reproducible variety.
+  /// Deterministic dummy. Pass [seed] for reproducible variety. The
+  /// description includes a category tag so the variety surfaces in
+  /// list rendering.
   factory UserProfileModel.dummy({String? id, int seed = 0}) {
     final s = seed.abs();
+    final category = _categories[s % _categories.length];
     return UserProfileModel(
       id: id ?? 'user_profile_$s',
       name: _names[s % _names.length],
-      description: _descriptions[s % _descriptions.length],
+      description: '${_descriptions[s % _descriptions.length]} [$category]',
       createdAt: DateTime(2024, 1, 1).add(Duration(days: s % 365)),
       updatedAt: DateTime(2024, 1, 1).add(Duration(days: (s % 365) + 1)),
     );

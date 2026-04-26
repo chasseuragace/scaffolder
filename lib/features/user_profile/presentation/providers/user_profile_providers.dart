@@ -10,9 +10,18 @@ final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {
   return UserProfileRepositoryFake.seeded();
 });
 
+/// Surfaced when a mutation (add/edit/remove) fails. The list state itself
+/// is rolled back to its pre-mutation value so the page stays usable; this
+/// provider lets the UI show transient feedback (e.g. a SnackBar) without
+/// putting the whole page into an error state. Reset to null after handling.
+final userProfileMutationErrorProvider = StateProvider<Object?>((ref) => null);
+
 /// Async list state with optimistic mutations.
 class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
   UserProfileRepository get _repo => ref.read(userProfileRepositoryProvider);
+
+  void _emitMutationError(Object error) =>
+      ref.read(userProfileMutationErrorProvider.notifier).state = error;
 
   Future<List<UserProfileEntity>> _fetchInitial() async {
     final result = await _repo.getAll();
@@ -41,14 +50,13 @@ class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (created) {
-        final next = [
+        state = AsyncData([
           for (final e in state.valueOrNull ?? <UserProfileEntity>[])
             if (e.id == tempId) created else e,
-        ];
-        state = AsyncData(next);
+        ]);
       },
     );
   }
@@ -63,7 +71,7 @@ class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (saved) {
         state = AsyncData([
@@ -82,7 +90,7 @@ class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (_) {},
     );

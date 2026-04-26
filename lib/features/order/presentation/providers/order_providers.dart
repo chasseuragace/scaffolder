@@ -17,9 +17,18 @@ final orderHasMoreProvider = StateProvider<bool>((ref) => false);
 
 const _orderPageSize = 20;
 
+/// Surfaced when a mutation (add/edit/remove) fails. The list state itself
+/// is rolled back to its pre-mutation value so the page stays usable; this
+/// provider lets the UI show transient feedback (e.g. a SnackBar) without
+/// putting the whole page into an error state. Reset to null after handling.
+final orderMutationErrorProvider = StateProvider<Object?>((ref) => null);
+
 /// Async list state with optimistic mutations.
 class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
   OrderRepository get _repo => ref.read(orderRepositoryProvider);
+
+  void _emitMutationError(Object error) =>
+      ref.read(orderMutationErrorProvider.notifier).state = error;
 
   bool _loadingMore = false;
 
@@ -56,9 +65,7 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
     );
     _loadingMore = false;
     result.fold(
-      (_) {
-        // Keep existing data on error; surface via a separate channel if needed.
-      },
+      _emitMutationError,
       (page) {
         ref.read(orderHasMoreProvider.notifier).state = page.hasMore;
         state = AsyncData([...current, ...page.items]);
@@ -78,14 +85,13 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (created) {
-        final next = [
+        state = AsyncData([
           for (final e in state.valueOrNull ?? <OrderEntity>[])
             if (e.id == tempId) created else e,
-        ];
-        state = AsyncData(next);
+        ]);
       },
     );
   }
@@ -100,7 +106,7 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (saved) {
         state = AsyncData([
@@ -119,7 +125,7 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
     result.fold(
       (f) {
         state = AsyncData(previous);
-        state = AsyncError(f, StackTrace.current);
+        _emitMutationError(f);
       },
       (_) {},
     );
