@@ -8,4 +8,5 @@ features:
   mock_data_generation: true
   json_serialization: true
   shimmer_loading: false
+  success_feedback: false
   unit_tests: false

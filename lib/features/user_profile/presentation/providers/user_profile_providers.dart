@@ -16,12 +16,23 @@ final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {
 /// putting the whole page into an error state. Reset to null after handling.
 final userProfileMutationErrorProvider = StateProvider<Object?>((ref) => null);
 
+/// Single-entity fetch used by the details page. Family-keyed on entity id;
+/// `autoDispose` so closing the details page releases the cache.
+final userProfileByIdProvider = FutureProvider.autoDispose
+    .family<UserProfileEntity, String>((ref, id) async {
+  final repo = ref.read(userProfileRepositoryProvider);
+  final result = await repo.getById(id);
+  return result.fold((f) => throw f, (e) => e);
+});
+
 /// Async list state with optimistic mutations.
 class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
   UserProfileRepository get _repo => ref.read(userProfileRepositoryProvider);
 
   void _emitMutationError(Object error) =>
       ref.read(userProfileMutationErrorProvider.notifier).state = error;
+
+  void _emitMutationSuccess(String op) {}
 
   Future<List<UserProfileEntity>> _fetchInitial() async {
     final result = await _repo.getAll();
@@ -57,6 +68,7 @@ class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
           for (final e in state.valueOrNull ?? <UserProfileEntity>[])
             if (e.id == tempId) created else e,
         ]);
+        _emitMutationSuccess('add');
       },
     );
   }
@@ -78,6 +90,7 @@ class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
           for (final e in state.valueOrNull ?? <UserProfileEntity>[])
             if (e.id == saved.id) saved else e,
         ]);
+        _emitMutationSuccess('edit');
       },
     );
   }
@@ -92,7 +105,9 @@ class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
         state = AsyncData(previous);
         _emitMutationError(f);
       },
-      (_) {},
+      (_) {
+        _emitMutationSuccess('remove');
+      },
     );
   }
 }

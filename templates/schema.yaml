@@ -26,6 +26,9 @@ flags:
   shimmer_loading:
     default: true
     description: Shimmer skeletons for loading states
+  success_feedback:
+    default: true
+    description: Show a brief SnackBar after successful add/edit/remove. Errors are always surfaced.
   unit_tests:
     default: true
     description: Generate unit test scaffolding for the feature

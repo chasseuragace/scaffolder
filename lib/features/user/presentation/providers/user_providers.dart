@@ -23,12 +23,29 @@ const _userPageSize = 20;
 /// putting the whole page into an error state. Reset to null after handling.
 final userMutationErrorProvider = StateProvider<Object?>((ref) => null);
 
+/// Names which mutation succeeded — `'add'`, `'edit'`, or `'remove'`.
+/// The list page listens to this and shows a brief confirmation SnackBar.
+/// Reset to null after handling.
+final userMutationSuccessProvider = StateProvider<String?>((ref) => null);
+
+/// Single-entity fetch used by the details page. Family-keyed on entity id;
+/// `autoDispose` so closing the details page releases the cache.
+final userByIdProvider = FutureProvider.autoDispose
+    .family<UserEntity, String>((ref, id) async {
+  final repo = ref.read(userRepositoryProvider);
+  final result = await repo.getById(id);
+  return result.fold((f) => throw f, (e) => e);
+});
+
 /// Async list state with optimistic mutations.
 class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
   UserRepository get _repo => ref.read(userRepositoryProvider);
 
   void _emitMutationError(Object error) =>
       ref.read(userMutationErrorProvider.notifier).state = error;
+
+  void _emitMutationSuccess(String op) =>
+      ref.read(userMutationSuccessProvider.notifier).state = op;
 
   bool _loadingMore = false;
 
@@ -92,6 +109,7 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
           for (final e in state.valueOrNull ?? <UserEntity>[])
             if (e.id == tempId) created else e,
         ]);
+        _emitMutationSuccess('add');
       },
     );
   }
@@ -113,6 +131,7 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
           for (final e in state.valueOrNull ?? <UserEntity>[])
             if (e.id == saved.id) saved else e,
         ]);
+        _emitMutationSuccess('edit');
       },
     );
   }
@@ -127,7 +146,9 @@ class UserListNotifier extends AsyncNotifier<List<UserEntity>> {
         state = AsyncData(previous);
         _emitMutationError(f);
       },
-      (_) {},
+      (_) {
+        _emitMutationSuccess('remove');
+      },
     );
   }
 }

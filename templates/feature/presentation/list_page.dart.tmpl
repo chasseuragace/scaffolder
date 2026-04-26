@@ -76,6 +76,29 @@ class _{{Module}}ListPageState extends ConsumerState<{{Module}}ListPage> {
       ref.read({{module}}MutationErrorProvider.notifier).state = null;
     });
 
+    // #if features.success_feedback
+    ref.listen<String?>({{module}}MutationSuccessProvider, (_, op) {
+      if (op == null) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      final label = switch (op) {
+        'add' => '{{Module}} added',
+        'edit' => '{{Module}} updated',
+        'remove' => '{{Module}} removed',
+        _ => 'Done',
+      };
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(label),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(milliseconds: 1500),
+          ),
+        );
+      ref.read({{module}}MutationSuccessProvider.notifier).state = null;
+    });
+    // #endif
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('{{Module}}s'),

@@ -49,7 +49,7 @@ class _OrderFormDialogState extends ConsumerState<OrderFormDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     final notifier = ref.read(orderListProvider.notifier);
-    final entity = (OrderEntity(
+    final entity = OrderEntity(
       id: widget.existing?.id ?? '',
       name: _name.text.trim(),
       description: _description.text.trim().isEmpty
@@ -57,7 +57,7 @@ class _OrderFormDialogState extends ConsumerState<OrderFormDialog> {
           : _description.text.trim(),
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
-    ));
+    );
     if (_isEdit) {
       await notifier.edit(entity);
     } else {
@@ -78,14 +78,24 @@ class _OrderFormDialogState extends ConsumerState<OrderFormDialog> {
           children: [
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(labelText: 'Name'),
+              autofocus: true,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Name *',
+                border: OutlineInputBorder(),
+              ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  (v == null || v.trim().isEmpty) ? 'Name is required' : null,
             ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _description,
-              decoration: const InputDecoration(labelText: 'Description'),
               maxLines: 3,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),

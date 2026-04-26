@@ -23,12 +23,29 @@ const _orderPageSize = 20;
 /// putting the whole page into an error state. Reset to null after handling.
 final orderMutationErrorProvider = StateProvider<Object?>((ref) => null);
 
+/// Names which mutation succeeded — `'add'`, `'edit'`, or `'remove'`.
+/// The list page listens to this and shows a brief confirmation SnackBar.
+/// Reset to null after handling.
+final orderMutationSuccessProvider = StateProvider<String?>((ref) => null);
+
+/// Single-entity fetch used by the details page. Family-keyed on entity id;
+/// `autoDispose` so closing the details page releases the cache.
+final orderByIdProvider = FutureProvider.autoDispose
+    .family<OrderEntity, String>((ref, id) async {
+  final repo = ref.read(orderRepositoryProvider);
+  final result = await repo.getById(id);
+  return result.fold((f) => throw f, (e) => e);
+});
+
 /// Async list state with optimistic mutations.
 class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
   OrderRepository get _repo => ref.read(orderRepositoryProvider);
 
   void _emitMutationError(Object error) =>
       ref.read(orderMutationErrorProvider.notifier).state = error;
+
+  void _emitMutationSuccess(String op) =>
+      ref.read(orderMutationSuccessProvider.notifier).state = op;
 
   bool _loadingMore = false;
 
@@ -92,6 +109,7 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
           for (final e in state.valueOrNull ?? <OrderEntity>[])
             if (e.id == tempId) created else e,
         ]);
+        _emitMutationSuccess('add');
       },
     );
   }
@@ -113,6 +131,7 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
           for (final e in state.valueOrNull ?? <OrderEntity>[])
             if (e.id == saved.id) saved else e,
         ]);
+        _emitMutationSuccess('edit');
       },
     );
   }
@@ -127,7 +146,9 @@ class OrderListNotifier extends AsyncNotifier<List<OrderEntity>> {
         state = AsyncData(previous);
         _emitMutationError(f);
       },
-      (_) {},
+      (_) {
+        _emitMutationSuccess('remove');
+      },
     );
   }
 }

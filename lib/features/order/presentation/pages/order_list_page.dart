@@ -66,6 +66,27 @@ class _OrderListPageState extends ConsumerState<OrderListPage> {
       ref.read(orderMutationErrorProvider.notifier).state = null;
     });
 
+    ref.listen<String?>(orderMutationSuccessProvider, (_, op) {
+      if (op == null) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      final label = switch (op) {
+        'add' => 'Order added',
+        'edit' => 'Order updated',
+        'remove' => 'Order removed',
+        _ => 'Done',
+      };
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(label),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(milliseconds: 1500),
+          ),
+        );
+      ref.read(orderMutationSuccessProvider.notifier).state = null;
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Orders'),

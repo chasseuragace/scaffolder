@@ -66,6 +66,27 @@ class _UserListPageState extends ConsumerState<UserListPage> {
       ref.read(userMutationErrorProvider.notifier).state = null;
     });
 
+    ref.listen<String?>(userMutationSuccessProvider, (_, op) {
+      if (op == null) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      final label = switch (op) {
+        'add' => 'User added',
+        'edit' => 'User updated',
+        'remove' => 'User removed',
+        _ => 'Done',
+      };
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(label),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(milliseconds: 1500),
+          ),
+        );
+      ref.read(userMutationSuccessProvider.notifier).state = null;
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Users'),

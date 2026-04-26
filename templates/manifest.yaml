@@ -34,6 +34,9 @@ core:
   - template: core/failure_messages.dart.tmpl
     output: lib/core/errors/failure_messages.dart
     once: true
+  - template: core/confirmation_dialog.dart.tmpl
+    output: lib/core/widgets/confirmation_dialog.dart
+    once: true
   - template: core/pagination.dart.tmpl
     output: lib/core/pagination/pagination.dart
     once: true
@@ -62,6 +65,8 @@ feature:
     output: lib/features/{{module_snake}}/presentation/providers/{{module_snake}}_providers.dart
   - template: feature/presentation/list_page.dart.tmpl
     output: lib/features/{{module_snake}}/presentation/pages/{{module_snake}}_list_page.dart
+  - template: feature/presentation/details_page.dart.tmpl
+    output: lib/features/{{module_snake}}/presentation/pages/{{module_snake}}_details_page.dart
   - template: feature/presentation/item_tile.dart.tmpl
     output: lib/features/{{module_snake}}/presentation/widgets/{{module_snake}}_item_tile.dart
   - template: feature/presentation/form_dialog.dart.tmpl
