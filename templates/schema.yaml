@@ -1,0 +1,37 @@
+# Canonical feature flag schema for the Flutter feature generator.
+# Presets layer over this. CLI --feature flags override presets.
+
+flags:
+  pagination:
+    default: true
+    description: Paginated list use case + accumulator notifier + infinite-scroll list page
+  fake_repository:
+    default: true
+    description: Include an in-memory fake repository implementation
+  search:
+    default: true
+    description: Include search use case + delegate
+  forms:
+    default: true
+    description: Form dialog widget for add/edit
+  optimistic_updates:
+    default: true
+    description: Update UI immediately on mutations, revert on failure
+  mock_data_generation:
+    default: true
+    description: Include factory dummy() / dummyList() on the model
+  json_serialization:
+    default: true
+    description: Add toJson/fromJson on the model
+  shimmer_loading:
+    default: true
+    description: Shimmer skeletons for loading states
+  unit_tests:
+    default: true
+    description: Generate unit test scaffolding for the feature
+
+# Logical conflicts between flag combinations. Each rule:
+#   message: human-readable
+#   when:    map of flag -> bool that must all match for the rule to fire
+#   then:    map of flag -> bool that must hold; otherwise the rule fails
+conflicts: []

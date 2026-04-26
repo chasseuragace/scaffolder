@@ -1,30 +1,43 @@
-# Feature Generator
+# tool/
 
-This small tool generates feature architecture files from `simpler_generator_folders.yaml` template.
+Generator implementation. See `../GENERATOR_README.md` for usage.
 
-Usage:
+## Layout
 
-- From the repository root:
+```
+tool/
+├── bin/generate.dart         # CLI entry point
+└── src/
+    ├── case_helpers.dart     # tokenize + Pascal/camel/snake/upper/kebab conversions
+    ├── schema.dart           # parses templates/schema.yaml (flag definitions + conflicts)
+    ├── preset.dart           # parses templates/presets/*.yaml
+    ├── manifest.dart         # parses templates/manifest.yaml (file groups)
+    ├── renderer.dart         # mustache substitution + line-marker conditionals
+    ├── registry_writer.dart  # idempotent edits to feature_registry.dart
+    └── generator.dart        # orchestrates schema -> preset -> manifest -> render -> write
+```
 
-  ```bash
-  # generate for 'User' feature
-  dart run tool/generate_feature.dart User
+The generator has zero Flutter dependencies; it is plain Dart that reads
+yaml. Tests live in `../test/tool/`.
 
-  # or using the shell wrapper
-  tool/generate_feature.sh User
+## Adding a new template file
 
-  # overwrite existing files
-  dart run tool/generate_feature.dart User --overwrite
+1. Create `templates/<group>/<name>.dart.tmpl` using the substitution
+   placeholders and `// #if features.X` markers as needed.
+2. Add an entry to `templates/manifest.yaml` under `core` (one-shot) or
+   `feature` (per-feature). Set `when: <flag>` to gate it.
+3. Run `dart run tool/bin/generate.dart <Module> --overwrite` to verify.
 
-  # use a custom template path or output base
-  dart run tool/generate_feature.dart User --template my_template.yaml --out lib
-  ```
+## Adding a new flag
 
-Notes:
-- Place `simpler_generator_folders.yaml` at the project root (it already exists).
-- The script uses placeholder replacements:
-  - `ModuleName` -> PascalCase (e.g., `UserProfile`)
-  - `module_name` -> snake_case (e.g., `user_profile`)
-  - `NAME` -> UPPER_SNAKE_CASE (e.g., `USER_PROFILE`)
-- By default the generated files are written under `lib/<category>/...`. Use `--out` to change the base folder.
+1. Declare it in `templates/schema.yaml` with `default` and `description`.
+2. Reference it from at least one template (`// #if features.<flag>`) or
+   manifest entry (`when: <flag>`).
+3. Decide which presets opt in via `templates/presets/*.yaml`.
 
+## Limits
+
+- Conditionals are line-based and do not nest (renderer raises).
+- No three-way merge on regeneration — `--overwrite` is destructive.
+- `repository_impl.dart` is a hand-edit stub. The intended path forward is
+  an openapi-generated client, see GENERATOR_README.md.

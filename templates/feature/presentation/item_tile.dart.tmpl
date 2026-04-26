@@ -1,0 +1,49 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../domain/entities/{{module_snake}}_entity.dart';
+import '../providers/{{module_snake}}_providers.dart';
+// #if features.forms
+import '{{module_snake}}_form_dialog.dart';
+// #endif
+
+class {{Module}}ItemTile extends ConsumerWidget {
+  const {{Module}}ItemTile({super.key, required this.item});
+
+  final {{Module}}Entity item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      title: Text(item.name ?? '(unnamed)'),
+      subtitle: item.description == null ? null : Text(item.description!),
+      trailing: PopupMenuButton<_TileAction>(
+        onSelected: (action) async {
+          switch (action) {
+            // #if features.forms
+            case _TileAction.edit:
+              await {{Module}}FormDialog.show(context, existing: item);
+            // #endif
+            case _TileAction.delete:
+              await ref
+                  .read({{module}}ListProvider.notifier)
+                  .remove(item.id);
+          }
+        },
+        itemBuilder: (_) => const [
+          // #if features.forms
+          PopupMenuItem(value: _TileAction.edit, child: Text('Edit')),
+          // #endif
+          PopupMenuItem(value: _TileAction.delete, child: Text('Delete')),
+        ],
+      ),
+    );
+  }
+}
+
+enum _TileAction {
+  // #if features.forms
+  edit,
+  // #endif
+  delete,
+}

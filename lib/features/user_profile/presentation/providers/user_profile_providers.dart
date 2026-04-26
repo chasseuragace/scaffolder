@@ -1,0 +1,95 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../domain/entities/user_profile_entity.dart';
+import '../../domain/repositories/user_profile_repository.dart';
+import '../../data/repositories/user_profile_repository_fake.dart';
+
+/// Single source of truth for the UserProfile repository. Override this
+/// provider in tests or production wiring.
+final userProfileRepositoryProvider = Provider<UserProfileRepository>((ref) {
+  return UserProfileRepositoryFake.seeded();
+});
+
+/// Async list state with optimistic mutations.
+class UserProfileListNotifier extends AsyncNotifier<List<UserProfileEntity>> {
+  UserProfileRepository get _repo => ref.read(userProfileRepositoryProvider);
+
+  Future<List<UserProfileEntity>> _fetchInitial() async {
+    final result = await _repo.getAll();
+    return result.fold((f) => throw f, (l) => l);
+  }
+
+  @override
+  Future<List<UserProfileEntity>> build() async {
+    return _fetchInitial();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_fetchInitial);
+  }
+
+  Future<void> add(UserProfileEntity entity) async {
+    final previous = state.valueOrNull ?? <UserProfileEntity>[];
+    final tempId = entity.id.isEmpty
+        ? 'tmp_${DateTime.now().microsecondsSinceEpoch}'
+        : entity.id;
+    final optimistic = entity.copyWith(id: tempId);
+    state = AsyncData([...previous, optimistic]);
+
+    final result = await _repo.add(entity);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        state = AsyncError(f, StackTrace.current);
+      },
+      (created) {
+        final next = [
+          for (final e in state.valueOrNull ?? <UserProfileEntity>[])
+            if (e.id == tempId) created else e,
+        ];
+        state = AsyncData(next);
+      },
+    );
+  }
+
+  Future<void> edit(UserProfileEntity entity) async {
+    final previous = state.valueOrNull ?? <UserProfileEntity>[];
+    state = AsyncData([
+      for (final e in previous) if (e.id == entity.id) entity else e,
+    ]);
+
+    final result = await _repo.update(entity);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        state = AsyncError(f, StackTrace.current);
+      },
+      (saved) {
+        state = AsyncData([
+          for (final e in state.valueOrNull ?? <UserProfileEntity>[])
+            if (e.id == saved.id) saved else e,
+        ]);
+      },
+    );
+  }
+
+  Future<void> remove(String id) async {
+    final previous = state.valueOrNull ?? <UserProfileEntity>[];
+    state = AsyncData(previous.where((e) => e.id != id).toList());
+
+    final result = await _repo.delete(id);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        state = AsyncError(f, StackTrace.current);
+      },
+      (_) {},
+    );
+  }
+}
+
+final userProfileListProvider =
+    AsyncNotifierProvider<UserProfileListNotifier, List<UserProfileEntity>>(
+  UserProfileListNotifier.new,
+);

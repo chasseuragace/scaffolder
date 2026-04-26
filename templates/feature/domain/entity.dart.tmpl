@@ -1,0 +1,49 @@
+/// Domain entity for {{Module}}. Plain immutable value object — no
+/// framework dependencies.
+class {{Module}}Entity {
+  const {{Module}}Entity({
+    required this.id,
+    this.name,
+    this.description,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String? name;
+  final String? description;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  {{Module}}Entity copyWith({
+    String? id,
+    String? name,
+    String? description,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return {{Module}}Entity(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is {{Module}}Entity &&
+          other.id == id &&
+          other.name == name &&
+          other.description == description &&
+          other.createdAt == createdAt &&
+          other.updatedAt == updatedAt;
+
+  @override
+  int get hashCode => Object.hash(id, name, description, createdAt, updatedAt);
+
+  @override
+  String toString() => '{{Module}}Entity(id: $id, name: $name)';
+}

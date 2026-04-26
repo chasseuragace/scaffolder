@@ -1,0 +1,195 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// #if features.pagination
+import '../../../../core/pagination/pagination.dart';
+// #endif
+import '../../domain/entities/{{module_snake}}_entity.dart';
+import '../../domain/repositories/{{module_snake}}_repository.dart';
+// #if features.fake_repository
+import '../../data/repositories/{{module_snake}}_repository_fake.dart';
+// #else
+import '../../data/repositories/{{module_snake}}_repository_impl.dart';
+// #endif
+
+/// Single source of truth for the {{Module}} repository. Override this
+/// provider in tests or production wiring.
+final {{module}}RepositoryProvider = Provider<{{Module}}Repository>((ref) {
+  // #if features.fake_repository
+  return {{Module}}RepositoryFake.seeded();
+  // #else
+  return const {{Module}}RepositoryImpl();
+  // #endif
+});
+
+// #if features.pagination
+/// True while there are more pages available. Read this from widgets that
+/// render a "load more" affordance; the list notifier keeps it up to date.
+final {{module}}HasMoreProvider = StateProvider<bool>((ref) => false);
+
+const _{{module}}PageSize = 20;
+// #endif
+
+/// Async list state with optimistic mutations.
+class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
+  {{Module}}Repository get _repo => ref.read({{module}}RepositoryProvider);
+
+  // #if features.pagination
+  bool _loadingMore = false;
+
+  Future<List<{{Module}}Entity>> _fetchInitial() async {
+    final result = await _repo.getAllPaginated(
+      const PaginationParams(offset: 0, limit: _{{module}}PageSize),
+    );
+    return result.fold((f) => throw f, (page) {
+      ref.read({{module}}HasMoreProvider.notifier).state = page.hasMore;
+      return page.items;
+    });
+  }
+  // #else
+  Future<List<{{Module}}Entity>> _fetchInitial() async {
+    final result = await _repo.getAll();
+    return result.fold((f) => throw f, (l) => l);
+  }
+  // #endif
+
+  @override
+  Future<List<{{Module}}Entity>> build() async {
+    return _fetchInitial();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_fetchInitial);
+  }
+
+  // #if features.pagination
+  /// Appends the next page if one is available. Safe to call repeatedly —
+  /// returns immediately when already loading or fully loaded.
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (_loadingMore) return;
+    if (!ref.read({{module}}HasMoreProvider)) return;
+    _loadingMore = true;
+    final result = await _repo.getAllPaginated(
+      PaginationParams(offset: current.length, limit: _{{module}}PageSize),
+    );
+    _loadingMore = false;
+    result.fold(
+      (_) {
+        // Keep existing data on error; surface via a separate channel if needed.
+      },
+      (page) {
+        ref.read({{module}}HasMoreProvider.notifier).state = page.hasMore;
+        state = AsyncData([...current, ...page.items]);
+      },
+    );
+  }
+  // #endif
+
+  Future<void> add({{Module}}Entity entity) async {
+    // #if features.optimistic_updates
+    final previous = state.valueOrNull ?? <{{Module}}Entity>[];
+    final tempId = entity.id.isEmpty
+        ? 'tmp_${DateTime.now().microsecondsSinceEpoch}'
+        : entity.id;
+    final optimistic = entity.copyWith(id: tempId);
+    state = AsyncData([...previous, optimistic]);
+
+    final result = await _repo.add(entity);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        state = AsyncError(f, StackTrace.current);
+      },
+      (created) {
+        final next = [
+          for (final e in state.valueOrNull ?? <{{Module}}Entity>[])
+            if (e.id == tempId) created else e,
+        ];
+        state = AsyncData(next);
+      },
+    );
+    // #else
+    final result = await _repo.add(entity);
+    state = result.fold(
+      (f) => AsyncError(f, StackTrace.current),
+      (created) =>
+          AsyncData([...(state.valueOrNull ?? <{{Module}}Entity>[]), created]),
+    );
+    // #endif
+  }
+
+  Future<void> edit({{Module}}Entity entity) async {
+    // #if features.optimistic_updates
+    final previous = state.valueOrNull ?? <{{Module}}Entity>[];
+    state = AsyncData([
+      for (final e in previous) if (e.id == entity.id) entity else e,
+    ]);
+
+    final result = await _repo.update(entity);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        state = AsyncError(f, StackTrace.current);
+      },
+      (saved) {
+        state = AsyncData([
+          for (final e in state.valueOrNull ?? <{{Module}}Entity>[])
+            if (e.id == saved.id) saved else e,
+        ]);
+      },
+    );
+    // #else
+    final result = await _repo.update(entity);
+    state = result.fold(
+      (f) => AsyncError(f, StackTrace.current),
+      (saved) => AsyncData([
+        for (final e in state.valueOrNull ?? <{{Module}}Entity>[])
+          if (e.id == saved.id) saved else e,
+      ]),
+    );
+    // #endif
+  }
+
+  Future<void> remove(String id) async {
+    // #if features.optimistic_updates
+    final previous = state.valueOrNull ?? <{{Module}}Entity>[];
+    state = AsyncData(previous.where((e) => e.id != id).toList());
+
+    final result = await _repo.delete(id);
+    result.fold(
+      (f) {
+        state = AsyncData(previous);
+        state = AsyncError(f, StackTrace.current);
+      },
+      (_) {},
+    );
+    // #else
+    final result = await _repo.delete(id);
+    state = result.fold(
+      (f) => AsyncError(f, StackTrace.current),
+      (_) => AsyncData(
+        (state.valueOrNull ?? <{{Module}}Entity>[])
+            .where((e) => e.id != id)
+            .toList(),
+      ),
+    );
+    // #endif
+  }
+}
+
+final {{module}}ListProvider =
+    AsyncNotifierProvider<{{Module}}ListNotifier, List<{{Module}}Entity>>(
+  {{Module}}ListNotifier.new,
+);
+
+// #if features.search
+/// Search results provider, family-keyed on the query string.
+final {{module}}SearchProvider = FutureProvider.autoDispose
+    .family<List<{{Module}}Entity>, String>((ref, query) async {
+  final repo = ref.read({{module}}RepositoryProvider);
+  final result = await repo.search(query);
+  return result.fold((f) => throw f, (l) => l);
+});
+// #endif

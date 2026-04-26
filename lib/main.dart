@@ -1,38 +1,84 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_project/presentation/pages/dashboard_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/routing/feature_registry.dart';
+
 void main() {
-  runApp(ProviderScope(child: const MyApp()));
+  runApp(const ProviderScope(child: ReaderApp()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class ReaderApp extends StatelessWidget {
+  const ReaderApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final features = FeatureRegistry.all;
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Reader',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: UserDashboardPage(),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const _Home(),
+        ...FeatureRegistry.routes(),
+      },
+      onUnknownRoute: (settings) => MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text('Unknown route: ${settings.name}')),
+          body: const Center(child: Text('Route not registered.')),
+        ),
+      ),
+      builder: (context, child) => child ?? const SizedBox.shrink(),
+      home: features.isEmpty ? const _EmptyHome() : null,
+    );
+  }
+}
+
+class _Home extends StatelessWidget {
+  const _Home();
+
+  @override
+  Widget build(BuildContext context) {
+    final features = FeatureRegistry.all;
+    if (features.isEmpty) return const _EmptyHome();
+    return Scaffold(
+      appBar: AppBar(title: const Text('Reader')),
+      body: ListView.separated(
+        itemCount: features.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, i) {
+          final f = features[i];
+          return ListTile(
+            leading: Icon(f.icon),
+            title: Text(f.title),
+            subtitle: Text(f.routeName),
+            onTap: () => Navigator.of(context).pushNamed(f.routeName),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EmptyHome extends StatelessWidget {
+  const _EmptyHome();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Reader')),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'No features registered yet.\n\n'
+            'Run: dart run tool/bin/generate.dart <ModuleName>',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }

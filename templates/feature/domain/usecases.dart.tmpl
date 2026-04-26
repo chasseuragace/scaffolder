@@ -1,0 +1,60 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../../core/errors/failures.dart';
+import '../../../../core/usecase/usecase.dart';
+import '../entities/{{module_snake}}_entity.dart';
+import '../repositories/{{module_snake}}_repository.dart';
+
+class GetAll{{Module}}s extends UseCase<List<{{Module}}Entity>, NoParams> {
+  const GetAll{{Module}}s(this._repo);
+  final {{Module}}Repository _repo;
+
+  @override
+  Future<Either<Failure, List<{{Module}}Entity>>> call(NoParams params) =>
+      _repo.getAll();
+}
+
+class Get{{Module}}ById extends UseCase<{{Module}}Entity, String> {
+  const Get{{Module}}ById(this._repo);
+  final {{Module}}Repository _repo;
+
+  @override
+  Future<Either<Failure, {{Module}}Entity>> call(String id) => _repo.getById(id);
+}
+
+class Add{{Module}} extends UseCase<{{Module}}Entity, {{Module}}Entity> {
+  const Add{{Module}}(this._repo);
+  final {{Module}}Repository _repo;
+
+  @override
+  Future<Either<Failure, {{Module}}Entity>> call({{Module}}Entity params) =>
+      _repo.add(params);
+}
+
+class Update{{Module}} extends UseCase<{{Module}}Entity, {{Module}}Entity> {
+  const Update{{Module}}(this._repo);
+  final {{Module}}Repository _repo;
+
+  @override
+  Future<Either<Failure, {{Module}}Entity>> call({{Module}}Entity params) =>
+      _repo.update(params);
+}
+
+class Delete{{Module}} extends UseCase<Unit, String> {
+  const Delete{{Module}}(this._repo);
+  final {{Module}}Repository _repo;
+
+  @override
+  Future<Either<Failure, Unit>> call(String id) => _repo.delete(id);
+}
+
+// #if features.search
+class Search{{Module}}s extends UseCase<List<{{Module}}Entity>, String> {
+  const Search{{Module}}s(this._repo);
+  final {{Module}}Repository _repo;
+
+  @override
+  Future<Either<Failure, List<{{Module}}Entity>>> call(String query) =>
+      _repo.search(query);
+}
+// #endif

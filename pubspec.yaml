@@ -51,6 +51,7 @@ dev_dependencies:
 
   # Used by the generator script to parse YAML templates
   yaml: ^3.1.1
+  test: ^1.25.15
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

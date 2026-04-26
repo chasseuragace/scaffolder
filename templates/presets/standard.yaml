@@ -1,0 +1,11 @@
+# Standard preset — full feature set; the recommended default.
+features:
+  pagination: true
+  fake_repository: true
+  search: true
+  forms: true
+  optimistic_updates: true
+  mock_data_generation: true
+  json_serialization: true
+  shimmer_loading: true
+  unit_tests: true
