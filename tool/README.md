@@ -1,6 +1,6 @@
 # tool/
 
-Generator implementation. See `../GENERATOR_README.md` for usage.
+Generator implementation. See `../USAGE.md` for usage.
 
 ## Layout
 
@@ -40,4 +40,4 @@ yaml. Tests live in `../test/tool/`.
 - Conditionals are line-based and do not nest (renderer raises).
 - No three-way merge on regeneration — `--overwrite` is destructive.
 - `repository_impl.dart` is a hand-edit stub. The intended path forward is
-  an openapi-generated client, see GENERATOR_README.md.
+  an openapi-generated client, see USAGE.md.

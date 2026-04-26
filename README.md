@@ -39,6 +39,6 @@ views, and per-feature unit tests — all flag-gated.
 
 ## Documentation
 
-- **[GENERATOR_README.md](GENERATOR_README.md)** — full usage, presets, flag schema, template syntax, contributing a template.
+- **[USAGE.md](USAGE.md)** — full usage, presets, flag schema, template syntax, contributing a template.
 - **[ROADMAP.md](ROADMAP.md)** — what ships today, architecture invariants, **known limitations** (read this before adopting), prioritized roadmap, multi-framework portability walkthrough, OpenAPI integration plan.
 - **[tool/README.md](tool/README.md)** — internals of the generator engine.
