@@ -117,6 +117,18 @@ The fake repository slices its in-memory list by offset/limit, so the wired
 behaviour works end-to-end without a backend. The page size is `_pageSize = 20`
 inside the providers file — change it in one place per feature.
 
+## Limitations
+
+The full candid list lives in [`ROADMAP.md`](ROADMAP.md#known-limitations).
+The headline ones to know before adopting:
+
+- `repository_impl.dart` is an `UnimplementedError` stub — only the fake repo runs end-to-end today.
+- `--overwrite` is destructive; no three-way merge yet.
+- Pagination is offset-only; cursor pagination is roadmap.
+- No localization, no offline cache, no telemetry, no widget tests on generated UI.
+- Riverpod is hardcoded as the state management layer.
+- Conditional templates can't nest and don't support negation (`// #if !X`).
+
 ## Future direction
 
 See [`ROADMAP.md`](ROADMAP.md) for the full roadmap, including:

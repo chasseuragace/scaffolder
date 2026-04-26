@@ -355,6 +355,97 @@ feature → no domain or UI changes needed**.
 
 ---
 
+## Known limitations
+
+A candid list of what the tool **does not** do today. None of these are
+secret — calling them out up-front saves users from misaligned expectations
+and makes it easy to spot the next priority.
+
+### Capability gaps
+
+1. **No working real backend out of the box.** `repository_impl.dart`
+   throws `UnimplementedError`. The fake repository is the only path that
+   runs. Real HTTP integration is hand-written until **S1** ships.
+2. **Pagination is offset-based only.** Cursor pagination (Stripe / GitHub
+   style) is not supported yet. **S3** plans the variant.
+3. **No state persistence between launches.** The fake repo is purely
+   in-memory. Closing the app drops everything. Hive / sqflite caching is
+   reserved for **M2**.
+4. **No telemetry, retry, or offline policies.** Errors disappear into
+   `e.toString()`; failures aren't reported to Sentry/Firebase; failed
+   requests don't auto-retry. Reserved for **M3** / **M4**.
+5. **No localization.** UI strings are hardcoded English (`'No Users yet'`,
+   `'Required'`, `'Edit'`, etc.). Wiring `intl` / `flutter_localizations`
+   was deferred — see decision (3) below.
+6. **Form validation is trivial.** Single-line `Required` validators only.
+   No composable validators, no async/server-side validation, no debounced
+   field-level checks. **M6** plans the upgrade.
+
+### Architectural lock-ins
+
+7. **Riverpod-only state management.** Bloc, ChangeNotifier, signals — none
+   of these are supported, and adding them triples template surface. Teams
+   already standardised elsewhere would need to fork the templates.
+8. **Hand-rolled value classes.** No `freezed` / `equatable` integration.
+   Entity equality is hand-written `==`/`hashCode` — easy to forget a new
+   field on edit. **M7** is the opt-in flag.
+9. **Clean Architecture is not optional.** Every feature gets the
+   domain/data/presentation split, even when the feature is trivially
+   small. We rejected a `simple_mode` toggle in v1 because the conditional
+   surface area was unsustainable.
+10. **No widget tests on generated UI.** We test the fake repository
+    against its contract; we do not test that the generated `list_page`
+    renders correctly. `flutter analyze` enforces structural correctness;
+    behavioural correctness of the UI is the developer's responsibility.
+
+### Engine simplifications
+
+11. **Conditionals don't nest.** `// #if A` inside `// #if B` is rejected
+    by the renderer. The fix is helper-method extraction. Intentional —
+    nesting would invite spaghetti templates.
+12. **No conditional expressions.** No `// #if !A`, no `&&`, no `||`. If
+    you need negation, invert the branches with `// #else`.
+13. **Single comment prefix (`//`).** Templates assume C-style line
+    comments. Python / Ruby / YAML templates would need the renderer's
+    marker regex parameterised — one of the changes flagged in the React
+    port walkthrough.
+14. **Placeholder typos fail at render time, not parse time.** A typo like
+    `{{Modle}}` only errors when the renderer can't resolve it. A stricter
+    template-time validator (cross-checking placeholders against the known
+    substitution set) is a small future improvement.
+
+### DX gaps
+
+15. **`--overwrite` is destructive.** Hand-edits are clobbered. Three-way
+    merge regeneration (`--diff`) is **S4**.
+16. **No build-runner / file-watcher integration.** The generator runs on
+    demand. Generated code is committed (deliberate — the generator
+    scaffolds, it doesn't compile).
+17. **No batch mode.** One feature per invocation. A `--from-manifest
+    features.yaml` mode that scaffolds a list at once is not yet shipped.
+18. **No CI workflow shipped.** A `.github/workflows/test.yml` that runs
+    `flutter analyze && flutter test` and re-validates the generator's
+    output on every PR is missing — easy to add when the project moves
+    to GitHub.
+
+### Production polish gaps
+
+19. **No accessibility scaffolding.** No `Semantics` widgets, no explicit
+    keyboard-traversal hints, no font-scaling overrides. A11y is left to
+    Material defaults — fine for many apps, not enough for compliance-bound
+    products.
+20. **No optimistic-update conflict resolution.** Two simultaneous edits
+    against the same id will both apply locally; reconciliation is by
+    "whoever's `update` returned last." No CRDT, no vector clocks. Fine
+    for v1, brittle for collaborative apps.
+21. **Single `_pageSize = 20` per feature.** Hardcoded constant in the
+    generated `providers.dart`. Not configurable per call (e.g., bigger
+    pages for search results). Edit the constant after generation.
+
+If any of these block your use case, that's a strong signal to bump the
+matching roadmap item up the queue — or fork the templates and ship a
+local override.
+
 ## Open questions / decisions deferred
 
 These are real fork-in-the-road choices that have not been made yet.

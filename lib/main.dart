@@ -12,7 +12,6 @@ class ReaderApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final features = FeatureRegistry.all;
     return MaterialApp(
       title: 'Reader',
       theme: ThemeData(
@@ -30,8 +29,6 @@ class ReaderApp extends StatelessWidget {
           body: const Center(child: Text('Route not registered.')),
         ),
       ),
-      builder: (context, child) => child ?? const SizedBox.shrink(),
-      home: features.isEmpty ? const _EmptyHome() : null,
     );
   }
 }
@@ -42,7 +39,21 @@ class _Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final features = FeatureRegistry.all;
-    if (features.isEmpty) return const _EmptyHome();
+    if (features.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Reader')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'No features registered yet.\n\n'
+              'Run: dart run tool/bin/generate.dart <ModuleName>',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Reader')),
       body: ListView.separated(
@@ -57,27 +68,6 @@ class _Home extends StatelessWidget {
             onTap: () => Navigator.of(context).pushNamed(f.routeName),
           );
         },
-      ),
-    );
-  }
-}
-
-class _EmptyHome extends StatelessWidget {
-  const _EmptyHome();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reader')),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'No features registered yet.\n\n'
-            'Run: dart run tool/bin/generate.dart <ModuleName>',
-            textAlign: TextAlign.center,
-          ),
-        ),
       ),
     );
   }
