@@ -13,13 +13,25 @@ import 'tool.dart';
 ///   2. The directory contains a `pubspec.yaml` (sanity: it's a Dart/Flutter
 ///      project, not `~/Downloads` or `/etc`).
 ///   3. If `ALLOWED_ROOT` is set in the environment, the resolved path must
-///      be a descendant of it (or equal to it).
+///      be a descendant of *one of* the configured roots. Multiple roots
+///      can be supplied as a comma-separated list, e.g.
+///      `ALLOWED_ROOT=/Users/me/code,/Volumes/shared_code`. This matches
+///      the convention used by other MCP servers (e.g. `MCP_READ_PATHS`)
+///      and supports the common case of a developer who keeps code on
+///      both the home volume and an external mount.
 class PathSafety {
-  PathSafety({String? allowedRoot})
-      : _allowedRoot =
-            allowedRoot ?? Platform.environment['ALLOWED_ROOT'];
+  PathSafety({String? allowedRoots})
+      : _allowedRoots = _parseRoots(
+          allowedRoots ?? Platform.environment['ALLOWED_ROOT'],
+        );
 
-  final String? _allowedRoot;
+  /// Empty list means "no confinement" — `output_dir` is unrestricted
+  /// beyond the pubspec.yaml sanity check.
+  final List<String> _allowedRoots;
+
+  /// Read-only view of the configured roots, after canonicalisation.
+  /// Useful for the server startup banner.
+  List<String> get allowedRoots => List.unmodifiable(_allowedRoots);
 
   /// Returns the canonicalised absolute path of [outputDir] if it passes
   /// every check; otherwise throws [ToolFailure] with a message the agent
@@ -39,18 +51,27 @@ class PathSafety {
       );
     }
 
-    final allowed = _allowedRoot;
-    if (allowed != null && allowed.isNotEmpty) {
-      final root = Directory(allowed).absolute.path;
-      if (!_isWithin(resolved, root)) {
+    if (_allowedRoots.isNotEmpty) {
+      final allowed = _allowedRoots.any((root) => _isWithin(resolved, root));
+      if (!allowed) {
         throw ToolFailure(
-          'output_dir is outside ALLOWED_ROOT. '
-          'allowed=$root, requested=$resolved',
+          'output_dir is outside the configured ALLOWED_ROOT(s). '
+          'allowed=${_allowedRoots.join(", ")}, requested=$resolved',
         );
       }
     }
 
     return resolved;
+  }
+
+  static List<String> _parseRoots(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return const [];
+    return raw
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .map((s) => Directory(s).absolute.path)
+        .toList(growable: false);
   }
 
   static bool _isWithin(String path, String root) {

@@ -67,11 +67,14 @@ class FlutterGeneratorMCPServer {
     stderr.writeln('  default_working_root: $defaultWorkingRoot');
     stderr.writeln('  default_package:     $packageName');
     stderr.writeln('  tools:               ${_tools.keys.join(", ")}');
-    final allowed = Platform.environment['ALLOWED_ROOT'];
-    if (allowed != null && allowed.isNotEmpty) {
-      stderr.writeln('  allowed_root:        $allowed');
+    final allowedRoots = PathSafety().allowedRoots;
+    if (allowedRoots.isNotEmpty) {
+      stderr.writeln('  allowed_roots:       ${allowedRoots.length}');
+      for (final r in allowedRoots) {
+        stderr.writeln('    - $r');
+      }
     } else {
-      stderr.writeln('  allowed_root:        (unset — output_dir is '
+      stderr.writeln('  allowed_roots:       (unset — output_dir is '
           'unconstrained beyond pubspec.yaml sanity check)');
     }
 

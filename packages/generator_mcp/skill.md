@@ -136,7 +136,7 @@ makes sense):
 | `GENERATOR_ROOT` | auto-detected from server install | Where the templates + CLI live. Auto-detection walks up from `Platform.script` looking for `templates/schema.yaml`. Set this only if auto-detection fails (e.g. unusual install layout). |
 | `PROJECT_ROOT` | current directory | **Default working project** — where scaffolded files go when `output_dir` is omitted. |
 | `PACKAGE_NAME` | `flutter_project` | Default Flutter package name of the working project. |
-| `ALLOWED_ROOT` | *(unset)* | If set, every per-call `output_dir` must reside under this path. **Recommended in shared / multi-project setups.** |
+| `ALLOWED_ROOT` | *(unset)* | If set, every per-call `output_dir` must reside under one of the listed paths. **Comma-separated** for multiple roots — e.g. `ALLOWED_ROOT=/Users/me/code,/Volumes/shared_code`. **Recommended in shared / multi-project setups.** |
 
 CLI flags `--generator-root`, `--working-root` (a.k.a. `--project-root`),
 `--package-name` mirror the env vars.
@@ -161,9 +161,10 @@ templates; the caller specifies the working project per call.
         // OPTIONAL: a default working project. The agent can override
         // any tool call with output_dir to scaffold elsewhere.
         "PROJECT_ROOT": "/Users/me/code/current-project",
-        // STRONGLY RECOMMENDED: confine output_dir to a parent directory
-        // so an agent can't accidentally scaffold into your $HOME.
-        "ALLOWED_ROOT": "/Users/me/code"
+        // STRONGLY RECOMMENDED: confine output_dir to one or more parent
+        // directories so an agent can't accidentally scaffold into your
+        // $HOME. Comma-separated; common case is home + an external mount.
+        "ALLOWED_ROOT": "/Users/me/code,/Volumes/shared_code"
       }
     }
   }
