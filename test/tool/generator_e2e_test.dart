@@ -88,6 +88,20 @@ void main() {
     expect(regAfterRegen, contains('BetaModule.descriptor'));
   });
 
+  test('dry_run does not write files but still reports the file list', () {
+    final gen = Generator(
+      projectRoot: scratch.path,
+      templatesDir: '${Directory.current.path}/templates',
+      packageName: 'flutter_project',
+    );
+    final result = gen.run(moduleInput: 'Ghost', dryRun: true);
+    expect(result.created, isNotEmpty);
+    final firstFeatureFile = result.created
+        .firstWhere((p) => p.contains('features/ghost/'));
+    expect(File('${scratch.path}/$firstFeatureFile').existsSync(), isFalse,
+        reason: 'dry_run must not write files');
+  });
+
   test('preset overrides drop gated files', () {
     final gen = Generator(
       projectRoot: scratch.path,

@@ -38,11 +38,16 @@ class Generator {
   ///
   /// If [moduleInput] is null, only `core` (one-shot) entries are generated —
   /// useful for bootstrapping a project without registering a feature.
+  ///
+  /// When [dryRun] is true, the result reports what would happen without
+  /// writing any files or mutating the feature registry. Useful for previews
+  /// from AI-driven tools.
   GenerateResult run({
     String? moduleInput,
     String presetName = 'standard',
     Map<String, bool> overrides = const {},
     bool overwrite = false,
+    bool dryRun = false,
   }) {
     final schema = Schema.load(_path('schema.yaml'));
     final manifest = Manifest.load(_path('manifest.yaml'));
@@ -93,6 +98,7 @@ class Generator {
         flags: flags,
         overwrite: overwrite,
         forceOnceSemantics: true,
+        dryRun: dryRun,
         result: result,
       );
     }
@@ -105,17 +111,20 @@ class Generator {
           flags: flags,
           overwrite: overwrite,
           forceOnceSemantics: false,
+          dryRun: dryRun,
           result: result,
         );
       }
 
       // Register the generated module in the feature registry.
-      RegistryWriter('$projectRoot/lib/core/routing/feature_registry.dart')
-          .register(
-        packageName: packageName,
-        moduleSnake: subs['module_snake']!,
-        modulePascal: subs['Module']!,
-      );
+      if (!dryRun) {
+        RegistryWriter('$projectRoot/lib/core/routing/feature_registry.dart')
+            .register(
+          packageName: packageName,
+          moduleSnake: subs['module_snake']!,
+          modulePascal: subs['Module']!,
+        );
+      }
     }
 
     return result;
@@ -127,6 +136,7 @@ class Generator {
     required Map<String, bool> flags,
     required bool overwrite,
     required bool forceOnceSemantics,
+    required bool dryRun,
     required GenerateResult result,
   }) {
     if (entry.when != null && flags[entry.when] != true) return;
@@ -140,18 +150,18 @@ class Generator {
 
     final outputPath = _interpolate(entry.output, subs);
     final outFile = File('$projectRoot/$outputPath');
-    outFile.parent.createSync(recursive: true);
+    if (!dryRun) outFile.parent.createSync(recursive: true);
 
     if (outFile.existsSync()) {
       if (entry.preserve || !overwrite) {
         result.skipped.add(outputPath);
         return;
       }
-      outFile.writeAsStringSync(rendered);
+      if (!dryRun) outFile.writeAsStringSync(rendered);
       result.overwritten.add(outputPath);
       return;
     }
-    outFile.writeAsStringSync(rendered);
+    if (!dryRun) outFile.writeAsStringSync(rendered);
     result.created.add(outputPath);
   }
 

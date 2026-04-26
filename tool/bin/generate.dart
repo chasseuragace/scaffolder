@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import '../src/generator.dart';
@@ -13,6 +14,8 @@ Options:
   --preset <name>          Preset to use (simple|standard|enterprise). Default: standard.
   --feature <name>=<bool>  Override a flag. Repeatable.
   --overwrite              Overwrite existing files (incl. one-shot core files).
+  --dry-run                Report what would be written without touching the filesystem.
+  --json                   Emit a structured JSON report on stdout (for tools/IDEs).
   --templates <path>       Templates directory. Default: templates.
   --root <path>            Project root. Default: current directory.
   --package <name>         Package name. Default: flutter_project.
@@ -24,6 +27,7 @@ Examples:
   dart run tool/bin/generate.dart Order --preset enterprise
   dart run tool/bin/generate.dart Product --feature pagination=false
   dart run tool/bin/generate.dart --core-only
+  dart run tool/bin/generate.dart Invoice --dry-run --json
 ''';
 
 void main(List<String> argv) {
@@ -31,6 +35,8 @@ void main(List<String> argv) {
   var preset = 'standard';
   var overwrite = false;
   var coreOnly = false;
+  var dryRun = false;
+  var jsonOutput = false;
   var templatesDir = 'templates';
   var projectRoot = Directory.current.path;
   var packageName = 'flutter_project';
@@ -57,6 +63,10 @@ void main(List<String> argv) {
         overwrite = true;
       case '--core-only':
         coreOnly = true;
+      case '--dry-run':
+        dryRun = true;
+      case '--json':
+        jsonOutput = true;
       case '--templates':
         templatesDir = next();
       case '--root':
@@ -95,9 +105,15 @@ void main(List<String> argv) {
     exit(2);
   }
 
+  // Allow absolute --templates paths (e.g. when the wrapper passes a fully
+  // qualified directory). Relative paths resolve under projectRoot.
+  final resolvedTemplatesDir = templatesDir.startsWith('/')
+      ? templatesDir
+      : '$projectRoot/$templatesDir';
+
   final gen = Generator(
     projectRoot: projectRoot,
-    templatesDir: '$projectRoot/$templatesDir',
+    templatesDir: resolvedTemplatesDir,
     packageName: packageName,
   );
 
@@ -107,7 +123,20 @@ void main(List<String> argv) {
       presetName: preset,
       overrides: overrides,
       overwrite: overwrite,
+      dryRun: dryRun,
     );
+    if (jsonOutput) {
+      stdout.writeln(jsonEncode({
+        'success': true,
+        'dry_run': dryRun,
+        'module': moduleInput,
+        'preset': preset,
+        'created': result.created,
+        'overwritten': result.overwritten,
+        'skipped': result.skipped,
+      }));
+      return;
+    }
     for (final p in result.created) {
       stdout.writeln('  created    $p');
     }
@@ -118,15 +147,24 @@ void main(List<String> argv) {
       stdout.writeln('  skipped    $p (exists; use --overwrite)');
     }
     stdout.writeln(
-      '\nDone. created=${result.created.length} '
+      '\nDone${dryRun ? " (dry run)" : ""}. '
+      'created=${result.created.length} '
       'overwritten=${result.overwritten.length} '
       'skipped=${result.skipped.length}',
     );
   } on StateError catch (e) {
-    stderr.writeln(e.message);
+    if (jsonOutput) {
+      stdout.writeln(jsonEncode({'success': false, 'error': e.message}));
+    } else {
+      stderr.writeln(e.message);
+    }
     exit(1);
   } on ArgumentError catch (e) {
-    stderr.writeln(e.message);
+    if (jsonOutput) {
+      stdout.writeln(jsonEncode({'success': false, 'error': e.message}));
+    } else {
+      stderr.writeln(e.message);
+    }
     exit(2);
   }
 }

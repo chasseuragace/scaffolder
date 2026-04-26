@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 // GENERATED:imports BEGIN
 import 'package:flutter_project/features/order/order_module.dart';
+import 'package:flutter_project/features/product/product_module.dart';
 import 'package:flutter_project/features/user/user_module.dart';
 import 'package:flutter_project/features/user_profile/user_profile_module.dart';
 // GENERATED:imports END
@@ -31,6 +32,7 @@ class FeatureRegistry {
   static const List<FeatureDescriptor> all = <FeatureDescriptor>[
     // GENERATED:entries BEGIN
     OrderModule.descriptor,
+    ProductModule.descriptor,
     UserModule.descriptor,
     UserProfileModule.descriptor,
     // GENERATED:entries END
