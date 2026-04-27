@@ -32,6 +32,9 @@ flags:
   unit_tests:
     default: true
     description: Generate unit test scaffolding for the feature
+  filters:
+    default: true
+    description: Include generic filter parameter support in PaginationParams for API query params
 
 # Logical conflicts between flag combinations. Each rule:
 #   message: human-readable

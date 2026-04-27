@@ -47,6 +47,36 @@ class {{Module}}RepositoryImpl implements {{Module}}Repository {
   }
   // #endif
 
+// #if features.filters
+// Filter implementation notes for repository_impl:
+// TODO: Implement API call with filter serialization in getAllPaginated above
+// Filter serialization examples (choose based on your API format):
+//
+// 1. Simple query params:
+//    final queryParams = params.toQueryParams();
+//    final response = await http.get(Uri.parse('$apiUrl/{{module_snake}}?$queryParams'));
+//    Result: ?offset=0&limit=20&min_price=10&max_price=100
+//
+// 2. Nested format:
+//    // Modify toQueryParams() or implement custom serialization
+//    Result: ?filter[price][min]=10&filter[price][max]=100
+//
+// 3. Operator suffix:
+//    // Use filter keys like 'price__gte', 'price__lte'
+//    Result: ?price__gte=10&price__lte=100
+//
+// 4. Array values:
+//    // toQueryParams() handles arrays automatically
+//    Result: ?category=electronics&category=phones
+//
+// 5. JSON body (POST request):
+//    final response = await http.post(
+//      Uri.parse('$apiUrl/{{module_snake}}/search'),
+//      body: jsonEncode(params.toJson()),
+//      headers: {'Content-Type': 'application/json'},
+//    );
+// #endif
+
   @override
   Future<Either<Failure, {{Module}}Entity>> getById(String id) async {
     try {

@@ -6,10 +6,23 @@
 /// breaking this surface.
 library;
 
+// #if features.filters
+import 'dart:convert';
+// #endif
+
 class PaginationParams {
-  const PaginationParams({required this.offset, required this.limit});
+  const PaginationParams({
+    required this.offset,
+    required this.limit,
+    // #if features.filters
+    this.filters,
+    // #endif
+  });
   final int offset;
   final int limit;
+  // #if features.filters
+  final Map<String, dynamic>? filters;
+  // #endif
 
   PaginationParams nextPage() =>
       PaginationParams(offset: offset + limit, limit: limit);
@@ -25,6 +38,83 @@ class PaginationParams {
   @override
   String toString() => 'PaginationParams(offset: $offset, limit: $limit)';
 }
+
+// #if features.filters
+/// Filter extension methods for PaginationParams
+extension PaginationParamsFilters on PaginationParams {
+  /// Add a filter parameter
+  PaginationParams addFilter(String key, dynamic value) {
+    final newFilters = Map<String, dynamic>.from(filters ?? {});
+    newFilters[key] = value;
+    return PaginationParams(
+      offset: offset,
+      limit: limit,
+      filters: newFilters,
+    );
+  }
+
+  /// Remove a filter parameter
+  PaginationParams removeFilter(String key) {
+    if (filters == null) return this;
+    final newFilters = Map<String, dynamic>.from(filters!);
+    newFilters.remove(key);
+    return PaginationParams(
+      offset: offset,
+      limit: limit,
+      filters: newFilters.isEmpty ? null : newFilters,
+    );
+  }
+
+  /// Convert filters to query string format
+  /// Handles arrays (e.g., category=1&category=2) and nested values
+  /// Example: "offset=0&limit=20&min_price=10&category=electronics&category=phones"
+  String toQueryParams() {
+    final params = <String, String>{};
+    params['offset'] = offset.toString();
+    params['limit'] = limit.toString();
+
+    if (filters != null) {
+      filters!.forEach((key, value) {
+        if (value is List) {
+          // Handle arrays: category=1&category=2&category=3
+          for (final item in value) {
+            params[key] = item.toString();
+          }
+        } else if (value is Map) {
+          // Handle nested objects: filter[price][min]=10
+          _addNestedParams(params, key, value);
+        } else {
+          params[key] = value.toString();
+        }
+      });
+    }
+
+    return params.entries
+        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+  }
+
+  void _addNestedParams(Map<String, String> params, String prefix, dynamic value) {
+    if (value is Map) {
+      value.forEach((key, val) {
+        final newKey = '$prefix[$key]';
+        if (val is Map) {
+          _addNestedParams(params, newKey, val);
+        } else {
+          params[newKey] = val.toString();
+        }
+      });
+    }
+  }
+
+  /// Convert to JSON for request body
+  Map<String, dynamic> toJson() => {
+        'offset': offset,
+        'limit': limit,
+        if (filters != null) 'filters': filters,
+      };
+}
+// #endif
 
 class PaginatedResponse<T> {
   const PaginatedResponse({

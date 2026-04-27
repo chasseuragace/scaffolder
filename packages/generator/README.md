@@ -35,6 +35,11 @@ yaml. Tests live in `../test/tool/`.
    manifest entry (`when: <flag>`).
 3. Decide which presets opt in via `templates/presets/*.yaml`.
 
+## Documentation
+
+- See `templates/docs/FILTERS.md` for comprehensive guide on implementing
+  generic filter parameters for API query params.
+
 ## Limits
 
 - Conditionals are line-based and do not nest (renderer raises).

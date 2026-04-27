@@ -49,6 +49,29 @@ class {{Module}}RepositoryFake implements {{Module}}Repository {
   }
   // #endif
 
+// #if features.filters
+// Filter implementation notes for repository_fake:
+// TODO: Extend getAllPaginated above to apply filters for testing
+// Example implementation:
+// var filteredItems = _items;
+// if (params.filters != null && params.filters!.isNotEmpty) {
+//   filteredItems = filteredItems.where((item) {
+//     return params.filters!.entries.every((entry) {
+//       final key = entry.key;
+//       final value = entry.value;
+//       switch (key) {
+//         case 'name':
+//           return (item.name ?? '').toString() == value.toString();
+//         case 'description':
+//           return (item.description ?? '').toString() == value.toString();
+//         default:
+//           return true;
+//       }
+//     });
+//   }).toList();
+// }
+// #endif
+
   @override
   Future<Either<Failure, {{Module}}Entity>> getById(String id) async {
     final i = _items.indexWhere((m) => m.id == id);

@@ -118,6 +118,38 @@ void main() {
     expect(hasSearch, isFalse);
     expect(hasTest, isFalse);
   });
+
+  test('filters feature flag gates filter extension methods', () {
+    final gen = Generator(
+      projectRoot: scratch.path,
+      templatesDir: '${Directory.current.path}/templates',
+      packageName: 'flutter_project',
+    );
+
+    // Generate with filters enabled (default)
+    gen.run(moduleInput: 'FilteredItem', overwrite: true);
+    final paginationWithFilters =
+        File('${scratch.path}/lib/core/pagination/pagination.dart')
+            .readAsStringSync();
+    expect(paginationWithFilters, contains('filters'));
+    expect(paginationWithFilters, contains('PaginationParamsFilters'));
+    expect(paginationWithFilters, contains('addFilter'));
+    expect(paginationWithFilters, contains('toQueryParams'));
+
+    // Generate with filters disabled
+    gen.run(
+      moduleInput: 'NoFilterItem',
+      overrides: {'filters': false},
+      overwrite: true,
+    );
+    final paginationWithoutFilters =
+        File('${scratch.path}/lib/core/pagination/pagination.dart')
+            .readAsStringSync();
+    expect(paginationWithoutFilters, isNot(contains('filters')));
+    expect(paginationWithoutFilters, isNot(contains('PaginationParamsFilters')));
+    expect(paginationWithoutFilters, isNot(contains('addFilter')));
+    expect(paginationWithoutFilters, isNot(contains('toQueryParams')));
+  });
 }
 
 const _registrySeed = '''
