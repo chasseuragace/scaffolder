@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ProductRepositoryFake } from '../../../features/product/data/repositories/product.repository-fake';
 import type { ProductEntity } from '../../../features/product/domain/entities/product.entity';
+import { isRight, isLeft } from '../../../core/usecase/usecase';
 
 describe('ProductRepositoryFake', () => {
   let repository: ProductRepositoryFake;
@@ -12,8 +13,11 @@ describe('ProductRepositoryFake', () => {
 
   it('should return empty list initially', async () => {
     const result = await repository.getAll();
-    expect('right' in result).toBe(true);
-    expect(result.right).toEqual([]);
+    if (isRight(result)) {
+      expect(result.right).toEqual([]);
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should add an entity', async () => {
@@ -24,9 +28,12 @@ describe('ProductRepositoryFake', () => {
     };
 
     const result = await repository.add(entity);
-    expect('right' in result).toBe(true);
-    expect(result.right.id).toBe('1');
-    expect(result.right.name).toBe('Test Product');
+    if (isRight(result)) {
+      expect(result.right.id).toBe('1');
+      expect(result.right.name).toBe('Test Product');
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should get all entities', async () => {
@@ -37,8 +44,11 @@ describe('ProductRepositoryFake', () => {
     await repository.add(entity2);
 
     const result = await repository.getAll();
-    expect('right' in result).toBe(true);
-    expect(result.right.length).toBe(2);
+    if (isRight(result)) {
+      expect(result.right.length).toBe(2);
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should get entity by id', async () => {
@@ -46,14 +56,20 @@ describe('ProductRepositoryFake', () => {
     await repository.add(entity);
 
     const result = await repository.getById('1');
-    expect('right' in result).toBe(true);
-    expect(result.right.id).toBe('1');
+    if (isRight(result)) {
+      expect(result.right.id).toBe('1');
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should return NotFoundFailure for non-existent id', async () => {
     const result = await repository.getById('999');
-    expect('left' in result).toBe(true);
-    expect(result.left._tag).toBe('NotFoundFailure');
+    if (isLeft(result)) {
+      expect(result.left._tag).toBe('NotFoundFailure');
+    } else {
+      throw new Error('Expected left');
+    }
   });
 
   it('should update an entity', async () => {
@@ -63,8 +79,11 @@ describe('ProductRepositoryFake', () => {
     const updated: ProductEntity = { id: '1', name: 'Updated' };
     const result = await repository.update(updated);
 
-    expect('right' in result).toBe(true);
-    expect(result.right.name).toBe('Updated');
+    if (isRight(result)) {
+      expect(result.right.name).toBe('Updated');
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should delete an entity', async () => {
@@ -72,11 +91,18 @@ describe('ProductRepositoryFake', () => {
     await repository.add(entity);
 
     const result = await repository.delete('1');
-    expect('right' in result).toBe(true);
+    if (isRight(result)) {
+      // Success
+    } else {
+      throw new Error('Expected right');
+    }
 
     const all = await repository.getAll();
-    expect('right' in all).toBe(true);
-    expect(all.right.length).toBe(0);
+    if (isRight(all)) {
+      expect(all.right.length).toBe(0);
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should search entities by name', async () => {
@@ -89,9 +115,12 @@ describe('ProductRepositoryFake', () => {
     await repository.add(entity3);
 
     const result = await repository.search('ap');
-    expect('right' in result).toBe(true);
-    expect(result.right.length).toBe(2);
-    expect(result.right.map((e: ProductEntity) => e.name)).toEqual(['Apple', 'Apricot']);
+    if (isRight(result)) {
+      expect(result.right.length).toBe(2);
+      expect(result.right.map((e: ProductEntity) => e.name)).toEqual(['Apple', 'Apricot']);
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should return paginated results', async () => {
@@ -100,9 +129,12 @@ describe('ProductRepositoryFake', () => {
     }
 
     const result = await repository.getAllPaginated({ offset: 0, limit: 10 });
-    expect('right' in result).toBe(true);
-    expect(result.right.items.length).toBe(10);
-    expect(result.right.total).toBe(25);
+    if (isRight(result)) {
+      expect(result.right.items.length).toBe(10);
+      expect(result.right.total).toBe(25);
+    } else {
+      throw new Error('Expected right');
+    }
   });
 
   it('should handle offset correctly', async () => {
@@ -111,8 +143,11 @@ describe('ProductRepositoryFake', () => {
     }
 
     const result = await repository.getAllPaginated({ offset: 10, limit: 10 });
-    expect('right' in result).toBe(true);
-    expect(result.right.items.length).toBe(10);
-    expect(result.right.items[0].id).toBe('11');
+    if (isRight(result)) {
+      expect(result.right.items.length).toBe(10);
+      expect(result.right.items[0].id).toBe('11');
+    } else {
+      throw new Error('Expected right');
+    }
   });
 });
