@@ -51,7 +51,7 @@ jobs:
 
       - name: npm test
         working-directory: packages/example_react_app
-        run: npm test --run
+        run: npx vitest run
 
   generator:
     name: Generator — analyze + test
