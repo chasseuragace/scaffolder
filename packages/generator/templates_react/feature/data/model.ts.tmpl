@@ -1,0 +1,46 @@
+/// Data model for {{Module}} with JSON serialization.
+import type { {{Module}}Entity } from '../../domain/entities/{{module-kebab}}.entity';
+
+export interface {{Module}}Model {
+  id: string;
+  name?: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export function toEntity(model: {{Module}}Model): {{Module}}Entity {
+  return {
+    id: model.id,
+    name: model.name,
+    description: model.description,
+    createdAt: model.created_at ? new Date(model.created_at) : undefined,
+    updatedAt: model.updated_at ? new Date(model.updated_at) : undefined,
+  };
+}
+
+export function fromModel(entity: {{Module}}Entity): {{Module}}Model {
+  return {
+    id: entity.id,
+    name: entity.name,
+    description: entity.description,
+    created_at: entity.createdAt?.toISOString(),
+    updated_at: entity.updatedAt?.toISOString(),
+  };
+}
+
+// #if features.mock_data_generation
+export function dummy{{Module}}(id: string = '1'): {{Module}}Model {
+  return {
+    id,
+    name: `{{Module}} ${id}`,
+    description: `Description for {{Module}} ${id}`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function dummy{{Module}}List(count: number = 5): {{Module}}Model[] {
+  return Array.from({ length: count }, (_, i) => dummy{{Module}}(String(i + 1)));
+}
+// #endif

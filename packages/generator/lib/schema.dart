@@ -26,9 +26,11 @@ class ConflictRule {
 }
 
 class Schema {
-  Schema({required this.flags, required this.conflicts});
+  Schema({required this.flags, required this.conflicts, this.registryPath, this.importFormat});
   final List<FlagDef> flags;
   final List<ConflictRule> conflicts;
+  final String? registryPath;
+  final String? importFormat; // 'dart' or 'typescript'
 
   Set<String> get flagNames => flags.map((f) => f.name).toSet();
 
@@ -84,7 +86,10 @@ class Schema {
       }
     }
 
-    return Schema(flags: flags, conflicts: conflicts);
+    final registryPath = doc['registry_path'] as String?;
+    final importFormat = doc['import_format'] as String?;
+
+    return Schema(flags: flags, conflicts: conflicts, registryPath: registryPath, importFormat: importFormat);
   }
 
   static Map<String, bool> _flagMap(YamlMap node) {

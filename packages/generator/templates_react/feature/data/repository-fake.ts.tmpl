@@ -1,0 +1,85 @@
+/// In-memory fake repository for {{Module}}.
+import type { Either } from '../../../../core/usecase/usecase';
+import { left, right } from '../../../../core/usecase/usecase';
+import { NotFoundFailure, type Failure } from '../../../../core/errors/failures';
+import type { {{Module}}Entity } from '../../domain/entities/{{module-kebab}}.entity';
+import type { {{Module}}Repository } from '../../domain/repositories/{{module-kebab}}.repository';
+import { toEntity, dummy{{Module}}List } from '../models/{{module-kebab}}.model';
+// #if features.pagination
+import type { PaginationParams, PaginatedResponse } from '../../../../core/pagination/pagination';
+// #endif
+
+export class {{Module}}RepositoryFake implements {{Module}}Repository {
+  private data: {{Module}}Entity[] = [];
+
+  constructor(seedData: {{Module}}Entity[] = []) {
+    this.data = seedData;
+  }
+
+  static seeded(count: number = 5): {{Module}}RepositoryFake {
+    const models = dummy{{Module}}List(count);
+    return new {{Module}}RepositoryFake(models.map(toEntity));
+  }
+
+  async getAll(): Promise<Either<Failure, {{Module}}Entity[]>> {
+    return right([...this.data]);
+  }
+
+  async getById(id: string): Promise<Either<Failure, {{Module}}Entity>> {
+    const entity = this.data.find((e) => e.id === id);
+    if (!entity) {
+      return left(new NotFoundFailure(`{{Module}} with id ${id} not found`));
+    }
+    return right(entity);
+  }
+
+  async add(entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>> {
+    const newEntity = { ...entity, createdAt: new Date(), updatedAt: new Date() };
+    this.data.push(newEntity);
+    return right(newEntity);
+  }
+
+  async update(entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>> {
+    const index = this.data.findIndex((e) => e.id === entity.id);
+    if (index === -1) {
+      return left(new NotFoundFailure(`{{Module}} with id ${entity.id} not found`));
+    }
+    const updated = { ...entity, updatedAt: new Date() };
+    this.data[index] = updated;
+    return right(updated);
+  }
+
+  async delete(id: string): Promise<Either<Failure, void>> {
+    const index = this.data.findIndex((e) => e.id === id);
+    if (index === -1) {
+      return left(new NotFoundFailure(`{{Module}} with id ${id} not found`));
+    }
+    this.data.splice(index, 1);
+    return right(undefined);
+  }
+
+// #if features.search
+  async search(query: string): Promise<Either<Failure, {{Module}}Entity[]>> {
+    const lowerQuery = query.toLowerCase();
+    const results = this.data.filter(
+      (e) =>
+        e.name?.toLowerCase().includes(lowerQuery) ||
+        e.description?.toLowerCase().includes(lowerQuery)
+    );
+    return right(results);
+  }
+// #endif
+
+// #if features.pagination
+  async getAllPaginated(params: PaginationParams): Promise<Either<Failure, PaginatedResponse<{{Module}}Entity>>> {
+    const { offset, limit } = params;
+    const items = this.data.slice(offset, offset + limit);
+    return right({
+      items,
+      total: this.data.length,
+      offset,
+      limit,
+    });
+  }
+// #endif
+}

@@ -1,0 +1,40 @@
+/// Module exports for {{Module}}.
+export * from './domain/entities/{{module-kebab}}.entity';
+export * from './domain/repositories/{{module-kebab}}.repository';
+export * from './domain/usecases/{{module-kebab}}.usecases';
+export * from './data/models/{{module-kebab}}.model';
+export * from './data/repositories/{{module-kebab}}.repository-impl';
+// #if features.fake_repository
+export * from './data/repositories/{{module-kebab}}.repository-fake';
+// #endif
+export * from './presentation/hooks/{{module-kebab}}.hooks';
+export * from './presentation/{{module-kebab}}.repository-context';
+export * from './presentation/pages/{{module-kebab}}-list-page';
+export * from './presentation/pages/{{module-kebab}}-details-page';
+export * from './presentation/components/{{module-kebab}}-item-row';
+// #if features.forms
+export * from './presentation/components/{{module-kebab}}-form-dialog';
+// #endif
+// #if features.search
+export * from './presentation/components/{{module-kebab}}-search-bar';
+// #endif
+
+import { {{Module}}ListPage } from './presentation/pages/{{module-kebab}}-list-page';
+import { {{Module}}DetailsPage } from './presentation/pages/{{module-kebab}}-details-page';
+
+export const {{Module}}Descriptor = {
+  id: '{{module-kebab}}',
+  title: '{{Module}}s',
+  path: '/{{module-kebab}}',
+};
+
+export const {{Module}}Routes = [
+  {
+    path: '/{{module-kebab}}',
+    element: <{{Module}}ListPage />,
+  },
+  {
+    path: '/{{module-kebab}}/:id',
+    element: <{{Module}}DetailsPage />,
+  },
+];

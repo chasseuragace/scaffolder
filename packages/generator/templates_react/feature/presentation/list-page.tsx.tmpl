@@ -1,0 +1,92 @@
+/// List page for {{Module}}.
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { use{{Module}}List, use{{Module}}Mutations } from '../hooks/{{module-kebab}}.hooks';
+import { ErrorView } from '../../../../core/components/error-view';
+import { EmptyView } from '../../../../core/components/empty-view';
+// #if features.shimmer_loading
+import { ShimmerTileList } from '../../../../core/components/shimmer-tile';
+// #endif
+import { {{Module}}ItemRow } from '../components/{{module-kebab}}-item-row';
+// #if features.forms
+import { {{Module}}FormDialog } from '../components/{{module-kebab}}-form-dialog';
+// #endif
+
+export function {{Module}}ListPage() {
+  const navigate = useNavigate();
+  const { data, isLoading, error, refetch } = use{{Module}}List();
+  const { add, delete: deleteMutation } = use{{Module}}Mutations();
+// #if features.forms
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+// #endif
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this {{Module}}?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+// #if features.shimmer_loading
+    return <ShimmerTileList />;
+// #else
+    return <div className="flex justify-center p-8">Loading...</div>;
+// #endif
+  }
+
+  if (error) {
+    return <ErrorView message={error.message} onRetry={() => refetch()} />;
+  }
+
+  if (!data || data.length === 0) {
+    return <EmptyView message="No {{Module}}s yet" />;
+  }
+
+  return (
+    <div className="container mx-auto p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">{{Module}}s</h1>
+        <div className="space-x-2">
+          <button
+            onClick={() => refetch()}
+            className="rounded border px-4 py-2 hover:bg-gray-100"
+          >
+            Refresh
+          </button>
+// #if features.forms
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          >
+            Add {{Module}}
+          </button>
+// #endif
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {data.map((item) => (
+          <{{Module}}ItemRow
+            key={item.id}
+            item={item}
+            onView={() => navigate(`/{{module-kebab}}/${item.id}`)}
+            onDelete={() => handleDelete(item.id)}
+          />
+        ))}
+      </div>
+
+// #if features.forms
+      {isFormOpen && (
+        <{{Module}}FormDialog
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSave={(entity) => {
+            add.mutate(entity);
+            setIsFormOpen(false);
+          }}
+        />
+      )}
+// #endif
+    </div>
+  );
+}

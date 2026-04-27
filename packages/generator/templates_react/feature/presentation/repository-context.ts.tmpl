@@ -1,0 +1,25 @@
+/// Repository context for {{Module}} dependency injection.
+/// Allows switching between fake and real implementations.
+import { createRepositoryContext } from '../../../core/context/repository-context';
+import type { {{Module}}Repository } from '../domain/repositories/{{module-kebab}}.repository';
+// #if features.fake_repository
+import { {{Module}}RepositoryFake } from '../data/repositories/{{module-kebab}}.repository-fake';
+// #else
+import { {{Module}}RepositoryImpl } from '../data/repositories/{{module-kebab}}.repository-impl';
+// #endif
+
+export const {
+  Provider: {{Module}}RepositoryProvider,
+  useRepository: use{{Module}}RepositoryContext,
+} = createRepositoryContext<{{Module}}Repository>();
+
+/// Default repository implementation for development.
+/// Override this in production or tests by providing a different implementation
+/// to the {{Module}}RepositoryProvider.
+export function createDefault{{Module}}Repository(): {{Module}}Repository {
+  // #if features.fake_repository
+  return {{Module}}RepositoryFake.seeded();
+  // #else
+  return new {{Module}}RepositoryImpl();
+  // #endif
+}

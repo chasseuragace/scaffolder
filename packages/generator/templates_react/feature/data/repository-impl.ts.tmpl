@@ -1,0 +1,43 @@
+/// Real repository implementation for {{Module}}.
+/// Currently throws UnimplementedError — replace with actual API calls.
+import type { Either } from '../../../../core/usecase/usecase';
+import type { Failure } from '../../../../core/errors/failures';
+import type { {{Module}}Entity } from '../../domain/entities/{{module-kebab}}.entity';
+import type { {{Module}}Repository } from '../../domain/repositories/{{module-kebab}}.repository';
+// #if features.pagination
+import type { PaginationParams, PaginatedResponse } from '../../../../core/pagination/pagination';
+// #endif
+
+export class {{Module}}RepositoryImpl implements {{Module}}Repository {
+  async getAll(): Promise<Either<Failure, {{Module}}Entity[]>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+
+  async getById(_id: string): Promise<Either<Failure, {{Module}}Entity>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+
+  async add(_entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+
+  async update(_entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+
+  async delete(_id: string): Promise<Either<Failure, void>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+
+// #if features.search
+  async search(_query: string): Promise<Either<Failure, {{Module}}Entity[]>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+// #endif
+
+// #if features.pagination
+  async getAllPaginated(_params: PaginationParams): Promise<Either<Failure, PaginatedResponse<{{Module}}Entity>>> {
+    throw new Error('UnimplementedError: Real repository not yet implemented');
+  }
+// #endif
+}

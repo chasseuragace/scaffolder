@@ -118,11 +118,12 @@ class Generator {
 
       // Register the generated module in the feature registry.
       if (!dryRun) {
-        RegistryWriter('$projectRoot/lib/core/routing/feature_registry.dart')
-            .register(
+        final registryPath = schema.registryPath ?? 'lib/core/routing/feature_registry.dart';
+        RegistryWriter('$projectRoot/$registryPath').register(
           packageName: packageName,
           moduleSnake: subs['module_snake']!,
           modulePascal: subs['Module']!,
+          importFormat: schema.importFormat,
         );
       }
     }

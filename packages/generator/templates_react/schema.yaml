@@ -1,0 +1,47 @@
+# Canonical feature flag schema for the React feature generator.
+# Presets layer over this. CLI --feature flags override presets.
+
+# Framework-specific configuration
+registry_path: src/core/routing/feature-registry.ts
+import_format: typescript
+
+flags:
+  pagination:
+    default: true
+    description: Paginated list use case + accumulator hook + infinite-scroll list page
+  fake_repository:
+    default: true
+    description: Include an in-memory fake repository implementation
+  search:
+    default: true
+    description: Include search use case + search bar component
+  forms:
+    default: true
+    description: Form dialog component for add/edit
+  optimistic_updates:
+    default: true
+    description: Update UI immediately on mutations, revert on failure
+  mock_data_generation:
+    default: true
+    description: Include factory dummy() / dummyList() on the model
+  json_serialization:
+    default: true
+    description: Add toJson/fromJson on the model
+  shimmer_loading:
+    default: true
+    description: Skeleton components for loading states
+  success_feedback:
+    default: true
+    description: Show a brief toast after successful add/edit/remove. Errors are always surfaced.
+  unit_tests:
+    default: true
+    description: Generate unit test scaffolding for the feature
+  filters:
+    default: true
+    description: Include generic filter parameter support in PaginationParams for API query params
+
+# Logical conflicts between flag combinations. Each rule:
+#   message: human-readable
+#   when:    map of flag -> bool that must all match for the rule to fire
+#   then:    map of flag -> bool that must hold; otherwise the rule fails
+conflicts: []

@@ -1,0 +1,12 @@
+# Simple preset — minimal feature set for quick prototypes.
+features:
+  pagination: false
+  fake_repository: true
+  search: false
+  forms: true
+  optimistic_updates: true
+  mock_data_generation: true
+  json_serialization: true
+  shimmer_loading: false
+  success_feedback: true
+  unit_tests: false

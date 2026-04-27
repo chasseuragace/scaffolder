@@ -1,0 +1,12 @@
+# Enterprise preset — same as standard (reserved for future flags).
+features:
+  pagination: true
+  fake_repository: true
+  search: true
+  forms: true
+  optimistic_updates: true
+  mock_data_generation: true
+  json_serialization: true
+  shimmer_loading: true
+  success_feedback: true
+  unit_tests: true

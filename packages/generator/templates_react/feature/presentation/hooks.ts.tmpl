@@ -1,0 +1,128 @@
+/// TanStack Query hooks for {{Module}}.
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { {{Module}}Entity } from '../../domain/entities/{{module-kebab}}.entity';
+import type { {{Module}}Repository } from '../../domain/repositories/{{module-kebab}}.repository';
+import { GetAll{{Module}}sUseCase, Get{{Module}}ByIdUseCase, Add{{Module}}UseCase, Update{{Module}}UseCase, Delete{{Module}}UseCase } from '../../domain/usecases/{{module-kebab}}.usecases';
+// #if features.pagination
+import { GetAll{{Module}}sPaginatedUseCase } from '../../domain/usecases/{{module-kebab}}.usecases';
+import type { PaginationParams } from '../../../../core/pagination/pagination';
+// #endif
+// #if features.search
+import { Search{{Module}}sUseCase } from '../../domain/usecases/{{module-kebab}}.usecases';
+// #endif
+import { use{{Module}}RepositoryContext } from '../{{module-kebab}}.repository-context';
+
+const QUERY_KEY = ['{{module-kebab}}'];
+
+export function use{{Module}}Repository(): {{Module}}Repository {
+  return use{{Module}}RepositoryContext();
+}
+
+export function use{{Module}}List(): UseQueryResult<{{Module}}Entity[], Error> {
+  const repository = use{{Module}}Repository();
+  const useCase = new GetAll{{Module}}sUseCase(repository);
+  return useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: () => useCase.execute().then((result) => {
+      if ('left' in result) throw new Error(result.left.message);
+      return result.right;
+    }),
+  });
+}
+
+// #if features.pagination
+export function use{{Module}}ListPaginated(params: PaginationParams): UseQueryResult<{ items: {{Module}}Entity[]; total: number; hasMore: boolean }, Error> {
+  const repository = use{{Module}}Repository();
+  const useCase = new GetAll{{Module}}sPaginatedUseCase(repository);
+  return useQuery({
+    queryKey: [...QUERY_KEY, 'paginated', params],
+    queryFn: () => useCase.execute(params).then((result) => {
+      if ('left' in result) throw new Error(result.left.message);
+      return {
+        items: result.right.items,
+        total: result.right.total,
+        hasMore: result.right.offset + result.right.items.length < result.right.total,
+      };
+    }),
+  });
+}
+// #endif
+
+export function use{{Module}}ById(id: string): UseQueryResult<{{Module}}Entity, Error> {
+  const repository = use{{Module}}Repository();
+  const useCase = new Get{{Module}}ByIdUseCase(repository);
+  return useQuery({
+    queryKey: [...QUERY_KEY, id],
+    queryFn: () => useCase.execute(id).then((result) => {
+      if ('left' in result) throw new Error(result.left.message);
+      return result.right;
+    }),
+    enabled: !!id,
+  });
+}
+
+// #if features.search
+export function use{{Module}}Search(query: string): UseQueryResult<{{Module}}Entity[], Error> {
+  const repository = use{{Module}}Repository();
+  const useCase = new Search{{Module}}sUseCase(repository);
+  return useQuery({
+    queryKey: [...QUERY_KEY, 'search', query],
+    queryFn: () => useCase.execute(query).then((result) => {
+      if ('left' in result) throw new Error(result.left.message);
+      return result.right;
+    }),
+    enabled: query.length > 0,
+  });
+}
+// #endif
+
+export function use{{Module}}Mutations() {
+  const queryClient = useQueryClient();
+  const repository = use{{Module}}Repository();
+
+  const addMutation = useMutation({
+    mutationFn: (entity: {{Module}}Entity) => {
+      const useCase = new Add{{Module}}UseCase(repository);
+      return useCase.execute(entity).then((result) => {
+        if ('left' in result) throw new Error(result.left.message);
+        return result.right;
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (entity: {{Module}}Entity) => {
+      const useCase = new Update{{Module}}UseCase(repository);
+      return useCase.execute(entity).then((result) => {
+        if ('left' in result) throw new Error(result.left.message);
+        return result.right;
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => {
+      const useCase = new Delete{{Module}}UseCase(repository);
+      return useCase.execute(id).then((result) => {
+        if ('left' in result) throw new Error(result.left.message);
+        return result.right;
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+
+  return {
+    add: addMutation,
+    update: updateMutation,
+    delete: deleteMutation,
+  };
+}

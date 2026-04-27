@@ -42,13 +42,15 @@ class GeneratorTool implements MCPTool {
 
   @override
   String get description =>
-      'Scaffold a Flutter CRUD feature (domain/data/presentation). '
+      'Scaffold a CRUD feature (Clean Architecture: domain/data/presentation). '
+      'Supports both Flutter and React via the templates parameter. '
       'Writes files into the *working project* (output_dir or PROJECT_ROOT) '
       'using templates from the generator\'s install location. '
-      'Creates files under lib/features/<name>/ and test/features/<name>/, '
-      'and registers the feature in lib/core/routing/feature_registry.dart. '
+      'Creates files under lib/features/<name>/ or src/features/<name>/, '
+      'and registers the feature in the feature registry. '
       'Use dry_run=true to preview without writing. '
-      'Use overwrite=true to replace existing files (clobbers hand-edits).';
+      'Use overwrite=true to replace existing files (clobbers hand-edits). '
+      'Use templates="templates_react" for React projects.';
 
   @override
   Map<String, dynamic> get inputSchema => {
@@ -76,7 +78,7 @@ class GeneratorTool implements MCPTool {
             'type': 'boolean',
             'description':
                 'Replace existing files. Destructive — clobbers hand-edits. '
-                'feature_registry.dart is preserved regardless. Default false.',
+                'feature_registry is preserved regardless. Default false.',
           },
           'dry_run': {
             'type': 'boolean',
@@ -89,15 +91,21 @@ class GeneratorTool implements MCPTool {
             'description':
                 'The *working* project root to scaffold into. Defaults to '
                 'the server\'s PROJECT_ROOT env var. Must exist, be a '
-                'directory, contain pubspec.yaml, and (if ALLOWED_ROOT is '
+                'directory, contain pubspec.yaml or package.json, and (if ALLOWED_ROOT is '
                 'set) reside under it. NOT the generator\'s install '
                 'location — that is auto-detected.',
           },
           'package_name': {
             'type': 'string',
             'description':
-                'Flutter package name of the working project. Defaults to '
+                'Package name of the working project. Defaults to '
                 'the server\'s PACKAGE_NAME env var (typically `flutter_project`).',
+          },
+          'templates': {
+            'type': 'string',
+            'description':
+                'Templates directory to use. Relative to generator root. '
+                'Default "templates" for Flutter. Use "templates_react" for React projects.',
           },
         },
         'required': ['module_name'],
@@ -117,6 +125,12 @@ class GeneratorTool implements MCPTool {
     final workingRoot = _resolveWorkingRoot(arguments);
     final packageName =
         (arguments['package_name'] as String?) ?? defaultPackageName;
+    final templatesArg = arguments['templates'] as String?;
+    // For React templates, pass absolute path to generator root + templates_react
+    // For Flutter (default), use the existing _templatesDir which is already absolute
+    final templatesDir = templatesArg != null
+        ? Directory('$generatorRoot/$templatesArg').absolute.path
+        : _templatesDir;
 
     final cliArgs = <String>['run', _cliScript, '--json'];
     cliArgs.addAll([moduleName, '--preset', preset]);
@@ -133,7 +147,7 @@ class GeneratorTool implements MCPTool {
     }
 
     cliArgs.addAll(['--out', workingRoot]);
-    cliArgs.addAll(['--templates', _templatesDir]);
+    cliArgs.addAll(['--templates', templatesDir]);
     cliArgs.addAll(['--package', packageName]);
 
     final process = await Process.run(

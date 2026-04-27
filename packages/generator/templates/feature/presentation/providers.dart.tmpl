@@ -5,6 +5,7 @@ import '../../../../core/pagination/pagination.dart';
 // #endif
 import '../../domain/entities/{{module_snake}}_entity.dart';
 import '../../domain/repositories/{{module_snake}}_repository.dart';
+import '../../domain/usecases/{{module_snake}}_usecases.dart';
 // #if features.fake_repository
 import '../../data/repositories/{{module_snake}}_repository_fake.dart';
 // #else
@@ -47,7 +48,8 @@ final {{module}}MutationSuccessProvider = StateProvider<String?>((ref) => null);
 final {{module}}ByIdProvider = FutureProvider.autoDispose
     .family<{{Module}}Entity, String>((ref, id) async {
   final repo = ref.read({{module}}RepositoryProvider);
-  final result = await repo.getById(id);
+  final useCase = Get{{Module}}ByIdUseCase(repo);
+  final result = await useCase.execute(id);
   return result.fold((f) => throw f, (e) => e);
 });
 
@@ -69,7 +71,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
   bool _loadingMore = false;
 
   Future<List<{{Module}}Entity>> _fetchInitial() async {
-    final result = await _repo.getAllPaginated(
+    final useCase = GetAll{{Module}}sPaginatedUseCase(_repo);
+    final result = await useCase.execute(
       const PaginationParams(offset: 0, limit: _{{module}}PageSize),
     );
     return result.fold((f) => throw f, (page) {
@@ -79,7 +82,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
   }
   // #else
   Future<List<{{Module}}Entity>> _fetchInitial() async {
-    final result = await _repo.getAll();
+    final useCase = GetAll{{Module}}sUseCase(_repo);
+    final result = await useCase.execute();
     return result.fold((f) => throw f, (l) => l);
   }
   // #endif
@@ -103,7 +107,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
     if (_loadingMore) return;
     if (!ref.read({{module}}HasMoreProvider)) return;
     _loadingMore = true;
-    final result = await _repo.getAllPaginated(
+    final useCase = GetAll{{Module}}sPaginatedUseCase(_repo);
+    final result = await useCase.execute(
       PaginationParams(offset: current.length, limit: _{{module}}PageSize),
     );
     _loadingMore = false;
@@ -126,7 +131,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
     final optimistic = entity.copyWith(id: tempId);
     state = AsyncData([...previous, optimistic]);
 
-    final result = await _repo.add(entity);
+    final useCase = Add{{Module}}UseCase(_repo);
+    final result = await useCase.execute(entity);
     result.fold(
       (f) {
         state = AsyncData(previous);
@@ -141,7 +147,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
       },
     );
     // #else
-    final result = await _repo.add(entity);
+    final useCase = Add{{Module}}UseCase(_repo);
+    final result = await useCase.execute(entity);
     result.fold(
       _emitMutationError,
       (created) {
@@ -159,7 +166,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
       for (final e in previous) if (e.id == entity.id) entity else e,
     ]);
 
-    final result = await _repo.update(entity);
+    final useCase = Update{{Module}}UseCase(_repo);
+    final result = await useCase.execute(entity);
     result.fold(
       (f) {
         state = AsyncData(previous);
@@ -174,7 +182,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
       },
     );
     // #else
-    final result = await _repo.update(entity);
+    final useCase = Update{{Module}}UseCase(_repo);
+    final result = await useCase.execute(entity);
     result.fold(
       _emitMutationError,
       (saved) {
@@ -192,7 +201,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
     // #if features.optimistic_updates
     state = AsyncData(previous.where((e) => e.id != id).toList());
 
-    final result = await _repo.delete(id);
+    final useCase = Delete{{Module}}UseCase(_repo);
+    final result = await useCase.execute(id);
     result.fold(
       (f) {
         state = AsyncData(previous);
@@ -203,7 +213,8 @@ class {{Module}}ListNotifier extends AsyncNotifier<List<{{Module}}Entity>> {
       },
     );
     // #else
-    final result = await _repo.delete(id);
+    final useCase = Delete{{Module}}UseCase(_repo);
+    final result = await useCase.execute(id);
     result.fold(
       _emitMutationError,
       (_) {
@@ -225,7 +236,8 @@ final {{module}}ListProvider =
 final {{module}}SearchProvider = FutureProvider.autoDispose
     .family<List<{{Module}}Entity>, String>((ref, query) async {
   final repo = ref.read({{module}}RepositoryProvider);
-  final result = await repo.search(query);
+  final useCase = Search{{Module}}sUseCase(repo);
+  final result = await useCase.execute(query);
   return result.fold((f) => throw f, (l) => l);
 });
 // #endif

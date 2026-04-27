@@ -21,6 +21,8 @@ class RegistryWriter {
 
   static const _importBegin = '// GENERATED:imports BEGIN';
   static const _importEnd = '// GENERATED:imports END';
+  static const _registrationBegin = '// GENERATED:registrations BEGIN';
+  static const _registrationEnd = '// GENERATED:registrations END';
   static const _entryBegin = '// GENERATED:entries BEGIN';
   static const _entryEnd = '// GENERATED:entries END';
 
@@ -30,16 +32,24 @@ class RegistryWriter {
     required String packageName,
     required String moduleSnake,
     required String modulePascal,
+    String? importFormat,
   }) {
     final file = File(path);
     if (!file.existsSync()) {
-      throw StateError('feature_registry.dart not found at $path');
+      throw StateError('feature_registry not found at $path');
     }
     var contents = file.readAsStringSync();
 
-    final importLine =
-        "import 'package:$packageName/features/$moduleSnake/${moduleSnake}_module.dart';";
-    final entryLine = '${modulePascal}Module.descriptor,';
+    final isTypeScript = importFormat == 'typescript';
+    final importLine = isTypeScript
+        ? "import { ${modulePascal}Routes, ${modulePascal}Descriptor } from '../../features/$moduleSnake/${moduleSnake}.module';"
+        : "import 'package:$packageName/features/$moduleSnake/${moduleSnake}_module.dart';";
+    final entryLine = isTypeScript
+        ? '...${modulePascal}Routes,'
+        : '${modulePascal}Module.descriptor,';
+    final registrationLine = isTypeScript
+        ? 'FeatureRegistry.register(${modulePascal}Descriptor);'
+        : '';
 
     contents = _insertWithinMarkers(
       contents,
@@ -48,6 +58,17 @@ class RegistryWriter {
       newLine: importLine,
       indent: '',
     );
+
+    if (isTypeScript) {
+      contents = _insertWithinMarkers(
+        contents,
+        beginMarker: _registrationBegin,
+        endMarker: _registrationEnd,
+        newLine: registrationLine,
+        indent: '',
+      );
+    }
+
     contents = _insertWithinMarkers(
       contents,
       beginMarker: _entryBegin,

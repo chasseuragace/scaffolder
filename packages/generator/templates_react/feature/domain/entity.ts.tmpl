@@ -1,0 +1,49 @@
+/// Domain entity for {{Module}}. Plain immutable value object — no
+/// framework dependencies.
+export interface {{Module}}Entity {
+  readonly id: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly createdAt?: Date;
+  readonly updatedAt?: Date;
+}
+
+export class {{Module}}EntityClass implements {{Module}}Entity {
+  readonly id: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly createdAt?: Date;
+  readonly updatedAt?: Date;
+
+  constructor(data: {{Module}}Entity) {
+    this.id = data.id;
+    this.name = data.name;
+    this.description = data.description;
+    this.createdAt = data.createdAt;
+    this.updatedAt = data.updatedAt;
+  }
+
+  copyWith(partial: Partial<{{Module}}Entity>): {{Module}}Entity {
+    return new {{Module}}EntityClass({
+      id: partial.id ?? this.id,
+      name: partial.name ?? this.name,
+      description: partial.description ?? this.description,
+      createdAt: partial.createdAt ?? this.createdAt,
+      updatedAt: partial.updatedAt ?? this.updatedAt,
+    });
+  }
+
+  equals(other: {{Module}}Entity): boolean {
+    return (
+      this.id === other.id &&
+      this.name === other.name &&
+      this.description === other.description &&
+      this.createdAt?.getTime() === other.createdAt?.getTime() &&
+      this.updatedAt?.getTime() === other.updatedAt?.getTime()
+    );
+  }
+
+  toString(): string {
+    return `{{Module}}Entity(id: ${this.id}, name: ${this.name})`;
+  }
+}

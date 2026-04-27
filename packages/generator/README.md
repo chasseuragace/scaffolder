@@ -20,6 +20,30 @@ tool/
 The generator has zero Flutter dependencies; it is plain Dart that reads
 yaml. Tests live in `../test/tool/`.
 
+## Multi-Framework Support
+
+The generator supports multiple frameworks through template sets:
+
+- **Flutter** (default): `templates/` directory
+- **React**: `templates_react/` directory
+
+### React Support
+
+To generate React features:
+
+```bash
+dart run bin/generate.dart Product --templates ../generator/templates_react --out ../example_react_app
+```
+
+React templates use:
+- Vite for build tooling
+- React Router v6 for routing
+- TanStack Query for data fetching
+- Tailwind CSS for styling
+- TypeScript for type safety
+
+See `REACT_PORT_SUMMARY.md` for detailed porting learnings and framework-agnostic patterns.
+
 ## Adding a new template file
 
 1. Create `templates/<group>/<name>.dart.tmpl` using the substitution
@@ -27,6 +51,8 @@ yaml. Tests live in `../test/tool/`.
 2. Add an entry to `templates/manifest.yaml` under `core` (one-shot) or
    `feature` (per-feature). Set `when: <flag>` to gate it.
 3. Run `dart run tool/bin/generate.dart <Module> --overwrite` to verify.
+
+For React, create in `templates_react/` with `.ts.tmpl` or `.tsx.tmpl` extensions.
 
 ## Adding a new flag
 
@@ -39,6 +65,7 @@ yaml. Tests live in `../test/tool/`.
 
 - See `templates/docs/FILTERS.md` for comprehensive guide on implementing
   generic filter parameters for API query params.
+- See `REACT_PORT_SUMMARY.md` for React port details and framework-agnostic learnings.
 
 ## Limits
 

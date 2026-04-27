@@ -1,0 +1,94 @@
+# Manifest of templates to render.
+#
+# Each entry:
+#   template: path under templates_react/ to the .ts.tmpl/.tsx.tmpl source
+#   output:   destination path; supports {{module-kebab}} / {{Module}} substitution
+#   when:     optional flag name; entry is skipped unless the flag is true
+#   once:     if true, the entry is generated once per project (not per feature)
+
+core:
+  - template: core/failures.ts.tmpl
+    output: src/core/errors/failures.ts
+    once: true
+  - template: core/usecase.ts.tmpl
+    output: src/core/usecase/usecase.ts
+    once: true
+  - template: core/debouncer.ts.tmpl
+    output: src/core/utils/debouncer.ts
+    once: true
+    when: search
+  - template: core/error-view.tsx.tmpl
+    output: src/core/components/error-view.tsx
+    once: true
+  - template: core/empty-view.tsx.tmpl
+    output: src/core/components/empty-view.tsx
+    once: true
+  - template: core/shimmer-tile.tsx.tmpl
+    output: src/core/components/shimmer-tile.tsx
+    once: true
+    when: shimmer_loading
+  - template: core/feature-registry.ts.tmpl
+    output: src/core/routing/feature-registry.ts
+    once: true
+    preserve: true
+  - template: core/failure-messages.ts.tmpl
+    output: src/core/errors/failure-messages.ts
+    once: true
+  - template: core/confirmation-dialog.tsx.tmpl
+    output: src/core/components/confirmation-dialog.tsx
+    once: true
+  - template: core/pagination.ts.tmpl
+    output: src/core/pagination/pagination.ts
+    once: true
+    when: pagination
+  - template: core/repository-context.ts.tmpl
+    output: src/core/context/repository-context.tsx
+    once: true
+
+feature:
+  # Domain layer
+  - template: feature/domain/entity.ts.tmpl
+    output: src/features/{{module-kebab}}/domain/entities/{{module-kebab}}.entity.ts
+  - template: feature/domain/repository.ts.tmpl
+    output: src/features/{{module-kebab}}/domain/repositories/{{module-kebab}}.repository.ts
+  - template: feature/domain/usecases.ts.tmpl
+    output: src/features/{{module-kebab}}/domain/usecases/{{module-kebab}}.usecases.ts
+
+  # Data layer
+  - template: feature/data/model.ts.tmpl
+    output: src/features/{{module-kebab}}/data/models/{{module-kebab}}.model.ts
+  - template: feature/data/repository-impl.ts.tmpl
+    output: src/features/{{module-kebab}}/data/repositories/{{module-kebab}}.repository-impl.ts
+  - template: feature/data/repository-fake.ts.tmpl
+    output: src/features/{{module-kebab}}/data/repositories/{{module-kebab}}.repository-fake.ts
+    when: fake_repository
+
+  # Presentation layer
+  - template: feature/presentation/hooks.ts.tmpl
+    output: src/features/{{module-kebab}}/presentation/hooks/{{module-kebab}}.hooks.ts
+  - template: feature/presentation/list-page.tsx.tmpl
+    output: src/features/{{module-kebab}}/presentation/pages/{{module-kebab}}-list-page.tsx
+  - template: feature/presentation/details-page.tsx.tmpl
+    output: src/features/{{module-kebab}}/presentation/pages/{{module-kebab}}-details-page.tsx
+  - template: feature/presentation/item-row.tsx.tmpl
+    output: src/features/{{module-kebab}}/presentation/components/{{module-kebab}}-item-row.tsx
+  - template: feature/presentation/form-dialog.tsx.tmpl
+    output: src/features/{{module-kebab}}/presentation/components/{{module-kebab}}-form-dialog.tsx
+    when: forms
+  - template: feature/presentation/search-bar.tsx.tmpl
+    output: src/features/{{module-kebab}}/presentation/components/{{module-kebab}}-search-bar.tsx
+    when: search
+
+  # Repository context for DI
+  - template: feature/presentation/repository-context.ts.tmpl
+    output: src/features/{{module-kebab}}/presentation/{{module-kebab}}.repository-context.ts
+    once: true
+
+  # Public surface — module registration
+  - template: feature/module.ts.tmpl
+    output: src/features/{{module-kebab}}/{{module-kebab}}.module.tsx
+
+  # Tests
+  - template: feature/test/repository-fake-test.ts.tmpl
+    output: src/__tests__/features/{{module-kebab}}/{{module-kebab}}.repository-fake.test.ts
+    when: unit_tests

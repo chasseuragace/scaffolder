@@ -1,0 +1,96 @@
+/// Use cases for {{Module}}.
+import type { Either } from '../../../../core/usecase/usecase';
+import type { Failure } from '../../../../core/errors/failures';
+import type { {{Module}}Entity } from '../entities/{{module-kebab}}.entity';
+import type { {{Module}}Repository } from '../repositories/{{module-kebab}}.repository';
+// #if features.pagination
+import type { PaginationParams, PaginatedResponse } from '../../../../core/pagination/pagination';
+// #endif
+
+export class GetAll{{Module}}sUseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(): Promise<Either<Failure, {{Module}}Entity[]>> {
+    return this.repository.getAll();
+  }
+}
+
+export class Get{{Module}}ByIdUseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(id: string): Promise<Either<Failure, {{Module}}Entity>> {
+    return this.repository.getById(id);
+  }
+}
+
+export class Add{{Module}}UseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>> {
+    return this.repository.add(entity);
+  }
+}
+
+export class Update{{Module}}UseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>> {
+    return this.repository.update(entity);
+  }
+}
+
+export class Delete{{Module}}UseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(id: string): Promise<Either<Failure, void>> {
+    return this.repository.delete(id);
+  }
+}
+
+// #if features.search
+export class Search{{Module}}sUseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(query: string): Promise<Either<Failure, {{Module}}Entity[]>> {
+    return this.repository.search(query);
+  }
+}
+// #endif
+
+// #if features.pagination
+export class GetAll{{Module}}sPaginatedUseCase {
+  private repository: {{Module}}Repository;
+
+  constructor(repository: {{Module}}Repository) {
+    this.repository = repository;
+  }
+
+  async execute(params: PaginationParams): Promise<Either<Failure, PaginatedResponse<{{Module}}Entity>>> {
+    return this.repository.getAllPaginated(params);
+  }
+}
+// #endif

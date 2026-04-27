@@ -10,8 +10,9 @@ import 'tool.dart';
 ///
 /// Rules enforced:
 ///   1. The path resolves to an existing directory.
-///   2. The directory contains a `pubspec.yaml` (sanity: it's a Dart/Flutter
-///      project, not `~/Downloads` or `/etc`).
+///   2. The directory contains a `pubspec.yaml` (Dart/Flutter) or `package.json`
+///      (React/Node) — sanity check that it's a valid project, not `~/Downloads`
+///      or `/etc`.
 ///   3. If `ALLOWED_ROOT` is set in the environment, the resolved path must
 ///      be a descendant of *one of* the configured roots. Multiple roots
 ///      can be supplied as a comma-separated list, e.g.
@@ -44,10 +45,11 @@ class PathSafety {
     final resolved = dir.absolute.path;
 
     final pubspec = File('$resolved/pubspec.yaml');
-    if (!pubspec.existsSync()) {
+    final packageJson = File('$resolved/package.json');
+    if (!pubspec.existsSync() && !packageJson.existsSync()) {
       throw ToolFailure(
-        'output_dir has no pubspec.yaml — refusing to scaffold into a '
-        'non-Dart/Flutter project: $resolved',
+        'output_dir has no pubspec.yaml or package.json — refusing to scaffold '
+        'into a non-Dart/Flutter/React project: $resolved',
       );
     }
 

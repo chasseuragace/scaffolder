@@ -1,0 +1,21 @@
+/// Repository contract for {{Module}}.
+import type { Either } from '../../../../core/usecase/usecase';
+import type { Failure } from '../../../../core/errors/failures';
+import type { {{Module}}Entity } from '../entities/{{module-kebab}}.entity';
+// #if features.pagination
+import type { PaginationParams, PaginatedResponse } from '../../../../core/pagination/pagination';
+// #endif
+
+export interface {{Module}}Repository {
+  getAll(): Promise<Either<Failure, {{Module}}Entity[]>>;
+  getById(id: string): Promise<Either<Failure, {{Module}}Entity>>;
+  add(entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>>;
+  update(entity: {{Module}}Entity): Promise<Either<Failure, {{Module}}Entity>>;
+  delete(id: string): Promise<Either<Failure, void>>;
+// #if features.search
+  search(query: string): Promise<Either<Failure, {{Module}}Entity[]>>;
+// #endif
+// #if features.pagination
+  getAllPaginated(params: PaginationParams): Promise<Either<Failure, PaginatedResponse<{{Module}}Entity>>>;
+// #endif
+}

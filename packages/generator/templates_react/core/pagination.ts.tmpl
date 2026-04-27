@@ -1,0 +1,100 @@
+/// Generic pagination types used by repositories and hooks.
+///
+/// Offset/limit shape — the most common REST convention.
+/// Cursor-based variants can be added alongside without breaking this surface.
+
+// #if features.filters
+export interface PaginationParams {
+  offset: number;
+  limit: number;
+  filters?: Record<string, unknown>;
+}
+
+export function addFilter(
+  params: PaginationParams,
+  key: string,
+  value: unknown
+): PaginationParams {
+  const newFilters = { ...params.filters };
+  newFilters[key] = value;
+  return { ...params, filters: newFilters };
+}
+
+export function removeFilter(
+  params: PaginationParams,
+  key: string
+): PaginationParams {
+  if (!params.filters) return params;
+  const newFilters = { ...params.filters };
+  delete newFilters[key];
+  return {
+    ...params,
+    filters: Object.keys(newFilters).length === 0 ? undefined : newFilters,
+  };
+}
+
+export function toQueryParams(params: PaginationParams): string {
+  const query = new URLSearchParams();
+  query.append('offset', params.offset.toString());
+  query.append('limit', params.limit.toString());
+
+  if (params.filters) {
+    Object.entries(params.filters).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((item) => query.append(key, String(item)));
+      } else if (typeof value === 'object' && value !== null) {
+        addNestedParams(query, key, value);
+      } else {
+        query.append(key, String(value));
+      }
+    });
+  }
+
+  return query.toString();
+}
+
+function addNestedParams(
+  query: URLSearchParams,
+  prefix: string,
+  value: unknown
+): void {
+  if (typeof value === 'object' && value !== null) {
+    Object.entries(value).forEach(([k, v]) => {
+      const newKey = `${prefix}[${k}]`;
+      if (typeof v === 'object' && v !== null) {
+        addNestedParams(query, newKey, v);
+      } else {
+        query.append(newKey, String(v));
+      }
+    });
+  }
+}
+
+export function toJson(params: PaginationParams): Record<string, unknown> {
+  return {
+    offset: params.offset,
+    limit: params.limit,
+    ...(params.filters && { filters: params.filters }),
+  };
+}
+// #else
+export interface PaginationParams {
+  offset: number;
+  limit: number;
+}
+// #endif
+
+export function nextPage(params: PaginationParams): PaginationParams {
+  return { ...params, offset: params.offset + params.limit };
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export function hasMore<T>(response: PaginatedResponse<T>): boolean {
+  return response.offset + response.items.length < response.total;
+}
