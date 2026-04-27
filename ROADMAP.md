@@ -45,6 +45,8 @@ business logic.
 
 **Quality gates**: `flutter analyze` clean; `flutter test` 35/35 green; three
 coexisting features (User, Order, UserProfile) generated and verified.
+React example app: `tsc -b` clean; vitest tests green; Product feature generated
+and verified.
 
 ---
 
@@ -176,9 +178,9 @@ those packages.
 
 ### Long-term — strategic
 
-**L1. Multi-framework parity**
-Ship `templates_react/` (Vite + TanStack Query + React Router) as a peer
-of `templates/`. Same engine, same flag schema, same preset shape.
+**L1. Multi-framework parity** ✅ **SHIPPED**
+`templates_react/` (Vite + TanStack Query + React Router) is now available
+as a peer of `templates/`. Same engine, same flag schema, same preset shape.
 See "Multi-framework portability" below.
 
 **L2. Server-side templates**

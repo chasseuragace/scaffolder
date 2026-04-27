@@ -13,19 +13,23 @@ rewrite. See [`ROADMAP.md`](ROADMAP.md).
 
 ```
 packages/
-├── generator/        — engine + CLI + templates  (pure Dart, no Flutter)   ← workspace
-├── generator_mcp/    — MCP server for AI IDEs    (pure Dart, no Flutter)   ← workspace
-└── example_app/      — Flutter playground that consumes generator output   ← standalone
+├── generator/          — engine + CLI + templates  (pure Dart, no Flutter)   ← workspace
+├── generator_mcp/      — MCP server for AI IDEs    (pure Dart, no Flutter)   ← workspace
+├── example_app/        — Flutter playground that consumes generator output   ← standalone
+└── example_react_app/  — React playground that consumes generator output    ← standalone
 ```
 
 The dev tools (`generator` and `generator_mcp`) form a Dart workspace —
 one `dart pub get` at repo root resolves both, and `dart test` works
 without a Flutter SDK installed.
 
-The example app is a normal Flutter project. It has its own `pubspec.yaml`
-and is driven by `flutter pub` like any other Flutter codebase.
+The example apps are normal framework projects. Each has its own package
+config and is driven by the framework's tooling (`flutter pub` for Flutter,
+`npm` for React).
 
 ## Quick start
+
+### Flutter
 
 ```bash
 # 1. Resolve the dev tools (pure Dart, no Flutter SDK required)
@@ -39,6 +43,22 @@ cd packages/example_app
 flutter pub get
 flutter analyze && flutter test
 flutter run
+```
+
+### React
+
+```bash
+# 1. Resolve the dev tools (pure Dart, no Flutter SDK required)
+dart pub get
+
+# 2. Scaffold a feature into the React example app
+dart run packages/generator/bin/generate.dart Product --out packages/example_react_app --templates templates_react
+
+# 3. Run the React app
+cd packages/example_react_app
+npm install
+npm run build && npm test
+npm run dev
 ```
 
 `--core-only` bootstraps shared infra into a fresh project before the
