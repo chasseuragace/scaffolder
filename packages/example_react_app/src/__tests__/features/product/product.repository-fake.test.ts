@@ -1,0 +1,118 @@
+/// Tests for ProductRepositoryFake.
+import { describe, it, expect, beforeEach } from 'vitest';
+import { ProductRepositoryFake } from '../../../features/product/data/repositories/product.repository-fake';
+import type { ProductEntity } from '../../../features/product/domain/entities/product.entity';
+
+describe('ProductRepositoryFake', () => {
+  let repository: ProductRepositoryFake;
+
+  beforeEach(() => {
+    repository = new ProductRepositoryFake();
+  });
+
+  it('should return empty list initially', async () => {
+    const result = await repository.getAll();
+    expect('right' in result).toBe(true);
+    expect(result.right).toEqual([]);
+  });
+
+  it('should add an entity', async () => {
+    const entity: ProductEntity = {
+      id: '1',
+      name: 'Test Product',
+      description: 'Test description',
+    };
+
+    const result = await repository.add(entity);
+    expect('right' in result).toBe(true);
+    expect(result.right.id).toBe('1');
+    expect(result.right.name).toBe('Test Product');
+  });
+
+  it('should get all entities', async () => {
+    const entity1: ProductEntity = { id: '1', name: 'Test 1' };
+    const entity2: ProductEntity = { id: '2', name: 'Test 2' };
+
+    await repository.add(entity1);
+    await repository.add(entity2);
+
+    const result = await repository.getAll();
+    expect('right' in result).toBe(true);
+    expect(result.right.length).toBe(2);
+  });
+
+  it('should get entity by id', async () => {
+    const entity: ProductEntity = { id: '1', name: 'Test Product' };
+    await repository.add(entity);
+
+    const result = await repository.getById('1');
+    expect('right' in result).toBe(true);
+    expect(result.right.id).toBe('1');
+  });
+
+  it('should return NotFoundFailure for non-existent id', async () => {
+    const result = await repository.getById('999');
+    expect('left' in result).toBe(true);
+    expect(result.left._tag).toBe('NotFoundFailure');
+  });
+
+  it('should update an entity', async () => {
+    const entity: ProductEntity = { id: '1', name: 'Original' };
+    await repository.add(entity);
+
+    const updated: ProductEntity = { id: '1', name: 'Updated' };
+    const result = await repository.update(updated);
+
+    expect('right' in result).toBe(true);
+    expect(result.right.name).toBe('Updated');
+  });
+
+  it('should delete an entity', async () => {
+    const entity: ProductEntity = { id: '1', name: 'Test Product' };
+    await repository.add(entity);
+
+    const result = await repository.delete('1');
+    expect('right' in result).toBe(true);
+
+    const all = await repository.getAll();
+    expect('right' in all).toBe(true);
+    expect(all.right.length).toBe(0);
+  });
+
+  it('should search entities by name', async () => {
+    const entity1: ProductEntity = { id: '1', name: 'Apple' };
+    const entity2: ProductEntity = { id: '2', name: 'Banana' };
+    const entity3: ProductEntity = { id: '3', name: 'Apricot' };
+
+    await repository.add(entity1);
+    await repository.add(entity2);
+    await repository.add(entity3);
+
+    const result = await repository.search('ap');
+    expect('right' in result).toBe(true);
+    expect(result.right.length).toBe(2);
+    expect(result.right.map((e: ProductEntity) => e.name)).toEqual(['Apple', 'Apricot']);
+  });
+
+  it('should return paginated results', async () => {
+    for (let i = 1; i <= 25; i++) {
+      await repository.add({ id: String(i), name: `Item ${i}` });
+    }
+
+    const result = await repository.getAllPaginated({ offset: 0, limit: 10 });
+    expect('right' in result).toBe(true);
+    expect(result.right.items.length).toBe(10);
+    expect(result.right.total).toBe(25);
+  });
+
+  it('should handle offset correctly', async () => {
+    for (let i = 1; i <= 25; i++) {
+      await repository.add({ id: String(i), name: `Item ${i}` });
+    }
+
+    const result = await repository.getAllPaginated({ offset: 10, limit: 10 });
+    expect('right' in result).toBe(true);
+    expect(result.right.items.length).toBe(10);
+    expect(result.right.items[0].id).toBe('11');
+  });
+});
