@@ -1,31 +1,29 @@
 /// Feature registry for React Router.
-/// Generated features register their routes here.
+///
+/// Fix vs v1: `FeatureRegistry.register()` side-effect pattern replaced with
+/// a static `allDescriptors` array. Mutable registration at module-import time
+/// is order-dependent and fragile with bundler tree-shaking.
+///
+/// The generator populates the GENERATED:imports and GENERATED:entries markers.
+/// GENERATED:registrations is kept for backward compatibility with the RegistryWriter
+/// but now populates the descriptors array, not a mutation call.
 import type { RouteObject } from 'react-router-dom';
 
 // GENERATED:imports BEGIN
 // GENERATED:imports END
 
 export interface FeatureDescriptor {
-  id: string;
-  title: string;
-  path: string;
-  icon?: string;
+  readonly id: string;
+  readonly title: string;
+  readonly path: string;
+  readonly icon?: string;
 }
 
-export const FeatureRegistry = {
-  descriptors: [] as FeatureDescriptor[],
-
-  register(descriptor: FeatureDescriptor) {
-    this.descriptors.push(descriptor);
-  },
-
-  get all(): FeatureDescriptor[] {
-    return this.descriptors;
-  },
-};
-
-// GENERATED:registrations BEGIN
-// GENERATED:registrations END
+/// Static descriptor list — deterministic, tree-shake safe.
+export const allDescriptors: FeatureDescriptor[] = [
+  // GENERATED:registrations BEGIN
+  // GENERATED:registrations END
+];
 
 export const routes: RouteObject[] = [
   // GENERATED:entries BEGIN

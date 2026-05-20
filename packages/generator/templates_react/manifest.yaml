@@ -84,7 +84,7 @@ feature:
     output: src/features/{{module-kebab}}/presentation/{{module-kebab}}.repository-context.ts
     once: true
 
-  # Public surface — module registration
+  # Public surface — module registration + ModuleProvider
   - template: feature/module.ts.tmpl
     output: src/features/{{module-kebab}}/{{module-kebab}}.module.tsx
 

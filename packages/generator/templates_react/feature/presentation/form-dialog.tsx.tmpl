@@ -1,4 +1,7 @@
 /// Form dialog for adding/editing {{Module}}.
+///
+/// Fix vs v1: ID is now auto-generated with crypto.randomUUID() on create
+/// instead of requiring the user to type it. On edit, ID is shown read-only.
 import React, { useState, useEffect } from 'react';
 import type { {{Module}}Entity } from '../../domain/entities/{{module-kebab}}.entity';
 
@@ -10,46 +13,33 @@ interface {{Module}}FormDialogProps {
 }
 
 export function {{Module}}FormDialog({ isOpen, entity, onClose, onSave }: {{Module}}FormDialogProps) {
-  const [formData, setFormData] = useState<{{Module}}Entity>({
+  const [formData, setFormData] = useState<Omit<{{Module}}Entity, 'id'> & { id: string }>({
     id: '',
     name: '',
     description: '',
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (entity) {
-      setFormData(entity);
+      setFormData({ id: entity.id, name: entity.name ?? '', description: entity.description ?? '' });
     } else {
-      setFormData({
-        id: '',
-        name: '',
-        description: '',
-      });
+      /// Auto-generate a stable ID — users should never type IDs manually.
+      setFormData({ id: crypto.randomUUID(), name: '', description: '' });
     }
     setErrors({});
   }, [entity, isOpen]);
 
   const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.id.trim()) {
-      newErrors.id = 'ID is required';
-    }
-    if (!formData.name?.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const next: Record<string, string> = {};
+    if (!formData.name?.trim()) next.name = 'Name is required';
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      onSave(formData);
-    }
+    if (validate()) onSave(formData as {{Module}}Entity);
   };
 
   if (!isOpen) return null;
@@ -62,26 +52,22 @@ export function {{Module}}FormDialog({ isOpen, entity, onClose, onSave }: {{Modu
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">ID</label>
-            <input
-              type="text"
-              value={formData.id}
-              onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-              disabled={!!entity}
-              className={`w-full rounded border px-3 py-2 ${
-                errors.id ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {errors.id && <p className="mt-1 text-sm text-red-500">{errors.id}</p>}
-          </div>
+          {entity && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-500">ID</label>
+              <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                {formData.id}
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="mb-1 block text-sm font-medium">Name</label>
             <input
               type="text"
-              value={formData.name || ''}
+              value={formData.name ?? ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              autoFocus
               className={`w-full rounded border px-3 py-2 ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -92,14 +78,14 @@ export function {{Module}}FormDialog({ isOpen, entity, onClose, onSave }: {{Modu
           <div>
             <label className="mb-1 block text-sm font-medium">Description</label>
             <textarea
-              value={formData.description || ''}
+              value={formData.description ?? ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
               className="w-full rounded border border-gray-300 px-3 py-2"
             />
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
               onClick={onClose}

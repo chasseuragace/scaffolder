@@ -1,9 +1,14 @@
 /// List page for {{Module}}.
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+// #if features.pagination
+import { use{{Module}}ListInfinite, use{{Module}}Mutations } from '../hooks/{{module-kebab}}.hooks';
+// #else
 import { use{{Module}}List, use{{Module}}Mutations } from '../hooks/{{module-kebab}}.hooks';
+// #endif
 import { ErrorView } from '../../../../core/components/error-view';
 import { EmptyView } from '../../../../core/components/empty-view';
+import { ConfirmationDialog } from '../../../../core/components/confirmation-dialog';
 // #if features.shimmer_loading
 import { ShimmerTileList } from '../../../../core/components/shimmer-tile';
 // #endif
@@ -14,15 +19,37 @@ import { {{Module}}FormDialog } from '../components/{{module-kebab}}-form-dialog
 
 export function {{Module}}ListPage() {
   const navigate = useNavigate();
-  const { data, isLoading, error, refetch } = use{{Module}}List();
+
+// #if features.success_feedback
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!successMessage) return;
+    const t = setTimeout(() => setSuccessMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [successMessage]);
+  const { add, delete: deleteMutation } = use{{Module}}Mutations({ onSuccess: setSuccessMessage });
+// #else
   const { add, delete: deleteMutation } = use{{Module}}Mutations();
+// #endif
+
+// #if features.pagination
+  const { data: pages, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = use{{Module}}ListInfinite();
+  const data = pages?.pages.flatMap((p) => p.items) ?? [];
+  const refetch = () => {};
+// #else
+  const { data, isLoading, error, refetch } = use{{Module}}List();
+// #endif
+
 // #if features.forms
   const [isFormOpen, setIsFormOpen] = React.useState(false);
 // #endif
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this {{Module}}?')) {
-      deleteMutation.mutate(id);
+  /// Confirmation dialog state — replaces browser confirm() which blocks the event loop.
+  const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
+  const handleDeleteConfirm = () => {
+    if (deleteTargetId) {
+      deleteMutation.mutate(deleteTargetId);
+      setDeleteTargetId(null);
     }
   };
 
@@ -70,10 +97,24 @@ export function {{Module}}ListPage() {
             key={item.id}
             item={item}
             onView={() => navigate(`/{{module-kebab}}/${item.id}`)}
-            onDelete={() => handleDelete(item.id)}
+            onDelete={() => setDeleteTargetId(item.id)}
           />
         ))}
       </div>
+
+// #if features.pagination
+      {hasNextPage && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="rounded border px-6 py-2 hover:bg-gray-100 disabled:opacity-50"
+          >
+            {isFetchingNextPage ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
+// #endif
 
 // #if features.forms
       {isFormOpen && (
@@ -85,6 +126,23 @@ export function {{Module}}ListPage() {
             setIsFormOpen(false);
           }}
         />
+      )}
+// #endif
+
+      <ConfirmationDialog
+        isOpen={deleteTargetId !== null}
+        title="Delete {{Module}}"
+        message="Are you sure you want to delete this {{Module}}? This action cannot be undone."
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTargetId(null)}
+      />
+
+// #if features.success_feedback
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 rounded bg-green-500 px-4 py-2 text-white shadow-lg">
+          {successMessage}
+        </div>
       )}
 // #endif
     </div>

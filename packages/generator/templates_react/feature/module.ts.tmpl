@@ -1,40 +1,58 @@
-/// Module exports for {{Module}}.
-export * from './domain/entities/{{module-kebab}}.entity';
-export * from './domain/repositories/{{module-kebab}}.repository';
-export * from './domain/usecases/{{module-kebab}}.usecases';
-export * from './data/models/{{module-kebab}}.model';
-export * from './data/repositories/{{module-kebab}}.repository-impl';
-// #if features.fake_repository
-export * from './data/repositories/{{module-kebab}}.repository-fake';
-// #endif
-export * from './presentation/hooks/{{module-kebab}}.hooks';
-export * from './presentation/{{module-kebab}}.repository-context';
-export * from './presentation/pages/{{module-kebab}}-list-page';
-export * from './presentation/pages/{{module-kebab}}-details-page';
-export * from './presentation/components/{{module-kebab}}-item-row';
-// #if features.forms
-export * from './presentation/components/{{module-kebab}}-form-dialog';
-// #endif
-// #if features.search
-export * from './presentation/components/{{module-kebab}}-search-bar';
-// #endif
-
+/// Public surface for the {{Module}} feature.
+///
+/// Fix vs v1:
+///   - Only exports the public API (entity type, hooks, provider, routes).
+///   - Internal layers (model, repository-impl, usecases) are NOT re-exported
+///     so they don't leak into consumers or break tree-shaking.
+///   - Adds {{Module}}ModuleProvider so callers wire one component, not N providers.
+import React from 'react';
+import { {{Module}}RepositoryProvider, createDefault{{Module}}Repository } from './presentation/{{module-kebab}}.repository-context';
 import { {{Module}}ListPage } from './presentation/pages/{{module-kebab}}-list-page';
 import { {{Module}}DetailsPage } from './presentation/pages/{{module-kebab}}-details-page';
 
+// --- Public types -----------------------------------------------------------
+export type { {{Module}}Entity } from './domain/entities/{{module-kebab}}.entity';
+export type { {{Module}}Repository } from './domain/repositories/{{module-kebab}}.repository';
+
+// --- Public hooks -----------------------------------------------------------
+export {
+  use{{Module}}List,
+  use{{Module}}ById,
+  use{{Module}}Mutations,
+// #if features.search
+  use{{Module}}Search,
+// #endif
+// #if features.pagination
+  use{{Module}}ListInfinite,
+// #endif
+} from './presentation/hooks/{{module-kebab}}.hooks';
+
+// --- DI surface -------------------------------------------------------------
+export { {{Module}}RepositoryProvider, createDefault{{Module}}Repository } from './presentation/{{module-kebab}}.repository-context';
+
+// --- Module provider --------------------------------------------------------
+/// Drop-in provider that wires the default repository.
+/// Mount once in your app shell — no manual provider nesting required.
+///
+/// Usage:
+///   import { {{Module}}ModuleProvider } from './features/{{module-kebab}}/{{module-kebab}}.module';
+///   <{{Module}}ModuleProvider><App /></{{Module}}ModuleProvider>
+export function {{Module}}ModuleProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <{{Module}}RepositoryProvider repository={createDefault{{Module}}Repository()}>
+      {children}
+    </{{Module}}RepositoryProvider>
+  );
+}
+
+// --- Routing ----------------------------------------------------------------
 export const {{Module}}Descriptor = {
   id: '{{module-kebab}}',
   title: '{{Module}}s',
   path: '/{{module-kebab}}',
-};
+} as const;
 
 export const {{Module}}Routes = [
-  {
-    path: '/{{module-kebab}}',
-    element: <{{Module}}ListPage />,
-  },
-  {
-    path: '/{{module-kebab}}/:id',
-    element: <{{Module}}DetailsPage />,
-  },
+  { path: '/{{module-kebab}}', element: <{{Module}}ListPage /> },
+  { path: '/{{module-kebab}}/:id', element: <{{Module}}DetailsPage /> },
 ];
