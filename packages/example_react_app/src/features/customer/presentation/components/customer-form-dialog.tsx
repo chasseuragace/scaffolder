@@ -1,0 +1,107 @@
+/// Form dialog for adding/editing Customer.
+///
+/// Fix vs v1: ID is now auto-generated with crypto.randomUUID() on create
+/// instead of requiring the user to type it. On edit, ID is shown read-only.
+import React, { useState, useEffect } from 'react';
+import type { CustomerEntity } from '../../domain/entities/customer.entity';
+
+interface CustomerFormDialogProps {
+  isOpen: boolean;
+  entity?: CustomerEntity;
+  onClose: () => void;
+  onSave: (entity: CustomerEntity) => void;
+}
+
+export function CustomerFormDialog({ isOpen, entity, onClose, onSave }: CustomerFormDialogProps) {
+  const [formData, setFormData] = useState<Omit<CustomerEntity, 'id'> & { id: string }>({
+    id: '',
+    name: '',
+    description: '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (entity) {
+      setFormData({ id: entity.id, name: entity.name ?? '', description: entity.description ?? '' });
+    } else {
+      /// Auto-generate a stable ID — users should never type IDs manually.
+      setFormData({ id: crypto.randomUUID(), name: '', description: '' });
+    }
+    setErrors({});
+  }, [entity, isOpen]);
+
+  const validate = (): boolean => {
+    const next: Record<string, string> = {};
+    if (!formData.name?.trim()) next.name = 'Name is required';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validate()) onSave(formData as CustomerEntity);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+        <h2 className="mb-4 text-xl font-bold">
+          {entity ? 'Edit Customer' : 'Add Customer'}
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {entity && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-500">ID</label>
+              <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                {formData.id}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Name</label>
+            <input
+              type="text"
+              value={formData.name ?? ''}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              autoFocus
+              className={`w-full rounded border px-3 py-2 ${
+                errors.name ? 'border-red-500' : 'border-gray-300'
+              }`}
+            />
+            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Description</label>
+            <textarea
+              value={formData.description ?? ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              className="w-full rounded border border-gray-300 px-3 py-2"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border px-4 py-2 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            >
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

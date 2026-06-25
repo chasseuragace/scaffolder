@@ -1,36 +1,70 @@
 /// Feature registry for React Router.
-/// Generated features register their routes here.
+///
+/// The generator owns four marker regions in this file:
+///   - GENERATED:imports        — per-feature module imports
+///   - GENERATED:registrations  — descriptors collected into `allDescriptors`
+///   - GENERATED:providers      — module providers composed by `FeatureProviders`
+///   - GENERATED:entries        — route objects spread into `routes`
+///
+/// Everything outside the markers is hand-written and preserved across
+/// re-runs. The app shell consumes `allDescriptors`, `routes`, and
+/// `FeatureProviders` — and never needs editing when a feature is added.
+///
+/// Fix vs v1: `FeatureRegistry.register()` side-effect pattern replaced with
+/// static arrays. Mutable registration at module-import time is
+/// order-dependent and fragile with bundler tree-shaking.
+import { createElement, type ReactNode } from 'react';
 import type { RouteObject } from 'react-router-dom';
 
 // GENERATED:imports BEGIN
-import { ProductRoutes, ProductDescriptor } from '../../features/product/product.module';
+import { CustomerRoutes, CustomerDescriptor, CustomerModuleProvider } from '../../features/customer/customer.module';
+import { LoyaltyCardRoutes, LoyaltyCardDescriptor, LoyaltyCardModuleProvider } from '../../features/loyalty-card/loyalty-card.module';
+import { OrderRoutes, OrderDescriptor, OrderModuleProvider } from '../../features/order/order.module';
 // GENERATED:imports END
 
 export interface FeatureDescriptor {
-  id: string;
-  title: string;
-  path: string;
-  icon?: string;
+  readonly id: string;
+  readonly title: string;
+  readonly path: string;
+  readonly icon?: string;
 }
 
-export const FeatureRegistry = {
-  descriptors: [] as FeatureDescriptor[],
-
-  register(descriptor: FeatureDescriptor) {
-    this.descriptors.push(descriptor);
-  },
-
-  get all(): FeatureDescriptor[] {
-    return this.descriptors;
-  },
-};
-
-// GENERATED:registrations BEGIN
-FeatureRegistry.register(ProductDescriptor);
-// GENERATED:registrations END
+/// Static descriptor list — deterministic, tree-shake safe.
+export const allDescriptors: FeatureDescriptor[] = [
+  // GENERATED:registrations BEGIN
+  CustomerDescriptor,
+  LoyaltyCardDescriptor,
+  OrderDescriptor,
+  // GENERATED:registrations END
+];
 
 export const routes: RouteObject[] = [
   // GENERATED:entries BEGIN
-    ...ProductRoutes,
+    ...CustomerRoutes,
+    ...LoyaltyCardRoutes,
+    ...OrderRoutes,
   // GENERATED:entries END
 ];
+
+/// Repository providers contributed by each feature. Composed below so the
+/// app shell mounts a single <FeatureProviders> once, regardless of how many
+/// features exist.
+type FeatureProvider = (props: { children: ReactNode }) => ReactNode;
+
+const featureProviders: FeatureProvider[] = [
+  // GENERATED:providers BEGIN
+  CustomerModuleProvider,
+  LoyaltyCardModuleProvider,
+  OrderModuleProvider,
+  // GENERATED:providers END
+];
+
+/// Wraps `children` in every feature's repository provider — one instance per
+/// feature, shared across that feature's routes. Mount once in the app shell;
+/// adding a feature never requires touching the shell again.
+export function FeatureProviders({ children }: { children: ReactNode }) {
+  return featureProviders.reduceRight<ReactNode>(
+    (acc, Provider) => createElement(Provider, null, acc),
+    children,
+  );
+}

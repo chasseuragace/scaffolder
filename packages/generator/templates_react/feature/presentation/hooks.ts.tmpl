@@ -5,7 +5,10 @@
 ///   - pagination uses useInfiniteQuery (real infinite-scroll)
 ///   - optimistic_updates flag wires onMutate/onError rollback
 ///   - success_feedback callbacks exposed so pages can show toasts
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+// #if features.pagination
+import { useInfiniteQuery } from '@tanstack/react-query';
+// #endif
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { {{Module}}Entity } from '../../domain/entities/{{module-kebab}}.entity';

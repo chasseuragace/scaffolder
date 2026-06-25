@@ -1,12 +1,19 @@
 /// Feature registry for React Router.
 ///
-/// Fix vs v1: `FeatureRegistry.register()` side-effect pattern replaced with
-/// a static `allDescriptors` array. Mutable registration at module-import time
-/// is order-dependent and fragile with bundler tree-shaking.
+/// The generator owns four marker regions in this file:
+///   - GENERATED:imports        — per-feature module imports
+///   - GENERATED:registrations  — descriptors collected into `allDescriptors`
+///   - GENERATED:providers      — module providers composed by `FeatureProviders`
+///   - GENERATED:entries        — route objects spread into `routes`
 ///
-/// The generator populates the GENERATED:imports and GENERATED:entries markers.
-/// GENERATED:registrations is kept for backward compatibility with the RegistryWriter
-/// but now populates the descriptors array, not a mutation call.
+/// Everything outside the markers is hand-written and preserved across
+/// re-runs. The app shell consumes `allDescriptors`, `routes`, and
+/// `FeatureProviders` — and never needs editing when a feature is added.
+///
+/// Fix vs v1: `FeatureRegistry.register()` side-effect pattern replaced with
+/// static arrays. Mutable registration at module-import time is
+/// order-dependent and fragile with bundler tree-shaking.
+import { createElement, type ReactNode } from 'react';
 import type { RouteObject } from 'react-router-dom';
 
 // GENERATED:imports BEGIN
@@ -29,3 +36,23 @@ export const routes: RouteObject[] = [
   // GENERATED:entries BEGIN
   // GENERATED:entries END
 ];
+
+/// Repository providers contributed by each feature. Composed below so the
+/// app shell mounts a single <FeatureProviders> once, regardless of how many
+/// features exist.
+type FeatureProvider = (props: { children: ReactNode }) => ReactNode;
+
+const featureProviders: FeatureProvider[] = [
+  // GENERATED:providers BEGIN
+  // GENERATED:providers END
+];
+
+/// Wraps `children` in every feature's repository provider — one instance per
+/// feature, shared across that feature's routes. Mount once in the app shell;
+/// adding a feature never requires touching the shell again.
+export function FeatureProviders({ children }: { children: ReactNode }) {
+  return featureProviders.reduceRight<ReactNode>(
+    (acc, Provider) => createElement(Provider, null, acc),
+    children,
+  );
+}

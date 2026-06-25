@@ -72,4 +72,108 @@ void main() {
     final out = File(regPath).readAsStringSync();
     expect(out, contains('    // GENERATED:entries END'));
   });
+
+  group('TypeScript registry (import_format: typescript)', () {
+    late String tsPath;
+
+    setUp(() {
+      tsPath = '${tmp.path}/feature-registry.ts';
+      File(tsPath).writeAsStringSync(_tsSeed);
+    });
+
+    test('emits register-free array items into all four marker regions', () {
+      RegistryWriter(tsPath).register(
+        packageName: 'example_react_app',
+        moduleSnake: 'order',
+        modulePascal: 'Order',
+        importFormat: 'typescript',
+      );
+      final out = File(tsPath).readAsStringSync();
+
+      // Import pulls routes, descriptor, AND the module provider.
+      expect(
+        out,
+        contains(
+          "import { OrderRoutes, OrderDescriptor, OrderModuleProvider } "
+          "from '../../features/order/order.module';",
+        ),
+      );
+      // Descriptor is a bare array item — NOT a FeatureRegistry.register() call.
+      expect(out, contains('OrderDescriptor,'));
+      expect(out, isNot(contains('FeatureRegistry.register')));
+      // Provider is contributed to the FeatureProviders composition.
+      expect(out, contains('OrderModuleProvider,'));
+      // Route spread lands in the entries region.
+      expect(out, contains('...OrderRoutes,'));
+    });
+
+    test('uses kebab-case paths for multi-word names (matches files on disk)',
+        () {
+      RegistryWriter(tsPath).register(
+        packageName: 'example_react_app',
+        moduleSnake: 'loyalty_card',
+        modulePascal: 'LoyaltyCard',
+        importFormat: 'typescript',
+      );
+      final out = File(tsPath).readAsStringSync();
+      // Files are written to features/loyalty-card/loyalty-card.module — the
+      // import path must be kebab, NOT snake (loyalty_card), or TS can't
+      // resolve the module.
+      expect(
+        out,
+        contains("from '../../features/loyalty-card/loyalty-card.module';"),
+      );
+      expect(out, isNot(contains('loyalty_card')));
+      expect(out, contains('LoyaltyCardDescriptor,'));
+      expect(out, contains('LoyaltyCardModuleProvider,'));
+    });
+
+    test('is idempotent across all TS marker regions', () {
+      final w = RegistryWriter(tsPath);
+      w.register(
+        packageName: 'example_react_app',
+        moduleSnake: 'order',
+        modulePascal: 'Order',
+        importFormat: 'typescript',
+      );
+      final once = File(tsPath).readAsStringSync();
+      w.register(
+        packageName: 'example_react_app',
+        moduleSnake: 'order',
+        modulePascal: 'Order',
+        importFormat: 'typescript',
+      );
+      expect(File(tsPath).readAsStringSync(), equals(once));
+    });
+  });
 }
+
+const _tsSeed = '''
+import { createElement, type ReactNode } from 'react';
+import type { RouteObject } from 'react-router-dom';
+
+// GENERATED:imports BEGIN
+// GENERATED:imports END
+
+export const allDescriptors = [
+  // GENERATED:registrations BEGIN
+  // GENERATED:registrations END
+];
+
+export const routes: RouteObject[] = [
+  // GENERATED:entries BEGIN
+  // GENERATED:entries END
+];
+
+const featureProviders = [
+  // GENERATED:providers BEGIN
+  // GENERATED:providers END
+];
+
+export function FeatureProviders({ children }: { children: ReactNode }) {
+  return featureProviders.reduceRight<ReactNode>(
+    (acc, Provider) => createElement(Provider, null, acc),
+    children,
+  );
+}
+''';

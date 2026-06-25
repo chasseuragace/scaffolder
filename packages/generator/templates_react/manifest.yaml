@@ -44,6 +44,16 @@ core:
   - template: core/repository-context.ts.tmpl
     output: src/core/context/repository-context.tsx
     once: true
+  # App shell — generated once for a fresh project, never overwritten
+  # (preserve: true) so an existing app's entry point is never clobbered.
+  - template: core/App.tsx.tmpl
+    output: src/App.tsx
+    once: true
+    preserve: true
+  - template: core/main.tsx.tmpl
+    output: src/main.tsx
+    once: true
+    preserve: true
 
 feature:
   # Domain layer

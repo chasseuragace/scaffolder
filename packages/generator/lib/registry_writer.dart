@@ -23,6 +23,8 @@ class RegistryWriter {
   static const _importEnd = '// GENERATED:imports END';
   static const _registrationBegin = '// GENERATED:registrations BEGIN';
   static const _registrationEnd = '// GENERATED:registrations END';
+  static const _providersBegin = '// GENERATED:providers BEGIN';
+  static const _providersEnd = '// GENERATED:providers END';
   static const _entryBegin = '// GENERATED:entries BEGIN';
   static const _entryEnd = '// GENERATED:entries END';
 
@@ -41,14 +43,28 @@ class RegistryWriter {
     var contents = file.readAsStringSync();
 
     final isTypeScript = importFormat == 'typescript';
+    // React/TS feature files are written to kebab-case paths (see the
+    // {{module-kebab}} outputs in the manifest), while Dart files use
+    // snake_case. Single-word names coincide; multi-word names (e.g.
+    // loyaltyCard -> loyalty-card vs loyalty_card) diverge, so the TS import
+    // path must use kebab to match the files on disk.
+    final moduleKebab = moduleSnake.replaceAll('_', '-');
     final importLine = isTypeScript
-        ? "import { ${modulePascal}Routes, ${modulePascal}Descriptor } from '../../features/$moduleSnake/${moduleSnake}.module';"
+        ? "import { ${modulePascal}Routes, ${modulePascal}Descriptor, ${modulePascal}ModuleProvider } from '../../features/$moduleKebab/$moduleKebab.module';"
         : "import 'package:$packageName/features/$moduleSnake/${moduleSnake}_module.dart';";
     final entryLine = isTypeScript
         ? '...${modulePascal}Routes,'
         : '${modulePascal}Module.descriptor,';
+    // Write a plain array item (e.g. `ProductDescriptor,`) so the registry
+    // stays a static const — no side-effectful .register() at module load time.
     final registrationLine = isTypeScript
-        ? 'FeatureRegistry.register(${modulePascal}Descriptor);'
+        ? '${modulePascal}Descriptor,'
+        : '';
+    // Contribute the feature's repository provider to `FeatureProviders`
+    // (TS only). The app shell composes these once; adding a feature never
+    // requires editing the shell.
+    final providersLine = isTypeScript
+        ? '${modulePascal}ModuleProvider,'
         : '';
 
     contents = _insertWithinMarkers(
@@ -65,7 +81,14 @@ class RegistryWriter {
         beginMarker: _registrationBegin,
         endMarker: _registrationEnd,
         newLine: registrationLine,
-        indent: '',
+        indent: '  ',
+      );
+      contents = _insertWithinMarkers(
+        contents,
+        beginMarker: _providersBegin,
+        endMarker: _providersEnd,
+        newLine: providersLine,
+        indent: '  ',
       );
     }
 
