@@ -112,6 +112,54 @@ void main() {
     expect(core.first['output'], isA<String>());
   });
 
+  test('get_manifest honours templates:"templates_react" (React file shape)',
+      () async {
+    final r = await client.send('tools/call', {
+      'name': 'get_manifest',
+      'arguments': {'templates': 'templates_react'},
+    });
+    final inner = _decodeContent(r);
+    final core = (inner['core'] as List).cast<Map>();
+    final feature = (inner['feature'] as List).cast<Map>();
+    final outputs = [
+      ...core.map((e) => e['output'] as String),
+      ...feature.map((e) => e['output'] as String),
+    ];
+    // React manifest writes TS/TSX under src/, never Dart under lib/. This is
+    // the discriminator proving we read templates_react, not the default
+    // Flutter templates dir.
+    expect(outputs, isNotEmpty);
+    expect(outputs.every((o) => o.startsWith('src/')), isTrue,
+        reason: 'React outputs live under src/, got: $outputs');
+    expect(outputs.any((o) => o.endsWith('.ts') || o.endsWith('.tsx')), isTrue);
+    expect(outputs.any((o) => o.endsWith('.dart')), isFalse,
+        reason: 'React manifest must not emit .dart outputs');
+  });
+
+  test('get_presets honours templates:"templates_react"', () async {
+    final r = await client.send('tools/call', {
+      'name': 'get_presets',
+      'arguments': {'templates': 'templates_react'},
+    });
+    final inner = _decodeContent(r);
+    final presets = (inner['presets'] as Map).cast<String, dynamic>();
+    expect(presets.keys.toSet(),
+        containsAll(['simple', 'standard', 'enterprise']));
+  });
+
+  test('read tools wire the templates arg into path resolution', () async {
+    // A bogus templates dir must fail — proving the arg actually drives the
+    // resolved path (not silently ignored, falling back to the default dir).
+    for (final tool in ['get_presets', 'get_schema', 'get_manifest']) {
+      final r = await client.send('tools/call', {
+        'name': tool,
+        'arguments': {'templates': 'templates_nonexistent'},
+      });
+      expect(r.containsKey('error'), isTrue,
+          reason: '$tool with a bogus templates dir should error');
+    }
+  });
+
   test('generate_feature dry_run round-trips without writing files',
       () async {
     final scratch = Directory.systemTemp.createTempSync('mcp_int_');

@@ -40,14 +40,16 @@ This generator is unusually well-suited to AI agents:
 Return the canonical feature-flag schema as structured JSON. Call this
 before composing flags so you never invent a flag that doesn't exist.
 
-**Input:** none.
+**Input:** optional `templates` (default `"templates"`; pass
+`"templates_react"` for the React schema).
 **Returns:** `{ flags: [{name, default, description}], conflicts: [...] }`
 
 ### `get_presets`
 
 Return the available presets and the flags each one sets, as structured JSON.
 
-**Input:** none.
+**Input:** optional `templates` (default `"templates"`; pass
+`"templates_react"` for the React presets).
 **Returns:** `{ presets: { simple: {features: {...}}, standard: {...}, enterprise: {...} } }`
 
 ### `get_manifest`
@@ -55,7 +57,8 @@ Return the available presets and the flags each one sets, as structured JSON.
 Return the template manifest — which templates write to which paths,
 and under which flag-gates.
 
-**Input:** none.
+**Input:** optional `templates` (default `"templates"`; pass
+`"templates_react"` for the React manifest).
 **Returns:** `{ core: [...], feature: [...] }`. Each entry has `template`,
 `output`, optional `when` / `once` / `preserve`.
 

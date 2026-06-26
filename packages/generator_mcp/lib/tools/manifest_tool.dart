@@ -27,12 +27,21 @@ class ManifestTool implements MCPTool {
   @override
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
-        'properties': {},
+        'properties': {
+          'templates': {
+            'type': 'string',
+            'description':
+                'Templates directory to read the manifest from, relative to '
+                'the generator root. Default "templates" for Flutter. Use '
+                '"templates_react" for the React manifest.',
+          },
+        },
       };
 
   @override
   Future<String> execute(Map<String, dynamic> arguments) async {
-    final path = '$projectRoot/templates/manifest.yaml';
+    final templates = (arguments['templates'] as String?) ?? 'templates';
+    final path = '$projectRoot/$templates/manifest.yaml';
     final file = File(path);
     if (!file.existsSync()) {
       throw ToolFailure('manifest.yaml not found at $path');

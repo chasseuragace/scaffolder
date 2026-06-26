@@ -27,12 +27,21 @@ class SchemaTool implements MCPTool {
   @override
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
-        'properties': {},
+        'properties': {
+          'templates': {
+            'type': 'string',
+            'description':
+                'Templates directory to read the schema from, relative to the '
+                'generator root. Default "templates" for Flutter. Use '
+                '"templates_react" for the React schema.',
+          },
+        },
       };
 
   @override
   Future<String> execute(Map<String, dynamic> arguments) async {
-    final path = '$projectRoot/templates/schema.yaml';
+    final templates = (arguments['templates'] as String?) ?? 'templates';
+    final path = '$projectRoot/$templates/schema.yaml';
     final file = File(path);
     if (!file.existsSync()) {
       throw ToolFailure('schema.yaml not found at $path');

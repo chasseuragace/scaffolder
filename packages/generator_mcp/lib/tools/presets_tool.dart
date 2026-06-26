@@ -24,12 +24,21 @@ class PresetsTool implements MCPTool {
   @override
   Map<String, dynamic> get inputSchema => {
         'type': 'object',
-        'properties': {},
+        'properties': {
+          'templates': {
+            'type': 'string',
+            'description':
+                'Templates directory to read presets from, relative to the '
+                'generator root. Default "templates" for Flutter. Use '
+                '"templates_react" for React presets.',
+          },
+        },
       };
 
   @override
   Future<String> execute(Map<String, dynamic> arguments) async {
-    final dir = Directory('$projectRoot/templates/presets');
+    final templates = (arguments['templates'] as String?) ?? 'templates';
+    final dir = Directory('$projectRoot/$templates/presets');
     if (!dir.existsSync()) {
       throw ToolFailure('presets directory not found at ${dir.path}');
     }
