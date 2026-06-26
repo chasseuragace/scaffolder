@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter_generator_mcp/base/generator_root.dart';
-import 'package:flutter_generator_mcp/server.dart';
+import 'package:scaffolder_mcp/base/generator_root.dart';
+import 'package:scaffolder_mcp/server.dart';
 
 /// CLI entry. Distinguishes the *generator root* (auto-detected — where
 /// the templates and CLI live) from the *default working root* (where
@@ -52,7 +52,7 @@ class MCPConfig {
     workingRoot ??= Directory.current.path;
 
     return MCPConfig(
-      name: 'flutter-generator-mcp',
+      name: 'scaffolder-mcp',
       version: '1.0.0',
       generatorRoot: generatorRoot,
       defaultWorkingRoot: workingRoot,
@@ -62,7 +62,7 @@ class MCPConfig {
 
   static void _printUsage() {
     stderr.writeln('''
-flutter-generator-mcp — MCP server for the Flutter feature generator
+scaffolder-mcp — MCP server for the scaffolder feature generator
 
 Two roots are kept distinct on purpose:
   - generator root: where the templates + CLI live. Auto-detected from this
@@ -71,7 +71,7 @@ Two roots are kept distinct on purpose:
                     or the current directory; per-call override via output_dir.
 
 Usage:
-  dart run flutter_generator_mcp [options]
+  dart run scaffolder_mcp [options]
 
 Options:
   --generator-root <path>  Override generator install root (templates + CLI live here)

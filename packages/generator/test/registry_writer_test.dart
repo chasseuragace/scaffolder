@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import 'package:flutter_feature_generator/registry_writer.dart';
+import 'package:scaffolder/registry_writer.dart';
 
 const _seed = '''
 import 'package:flutter/material.dart';

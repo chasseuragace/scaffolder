@@ -1,6 +1,6 @@
-# Flutter Feature Generator — MCP Server
+# Scaffolder — MCP Server
 
-MCP server that lets an AI IDE scaffold Flutter Clean-Architecture features.
+MCP server that lets an AI IDE scaffold Clean-Architecture features (Flutter or React).
 Speaks JSON-RPC 2.0 over stdin/stdout. Pure Dart, zero runtime dependencies.
 
 ## Two roots, kept distinct on purpose
@@ -13,7 +13,7 @@ This is the most important mental model when wiring the server up:
 | **working root** | the *caller* per-tool-call (`output_dir`), or the server's `PROJECT_ROOT` env as default | the user's Flutter project — where scaffolded files end up. |
 
 Today these often coincide in self-hosted demos. They diverge the moment
-you install the server at `/opt/flutter-generator/` and point it at
+you install the server at `/opt/scaffolder/` and point it at
 `~/code/customer-portal/`. The schema/preset tools always read from the
 generator root; the `generate_feature` / `list_features` / `validate`
 tools always operate on the working root.
@@ -153,12 +153,12 @@ templates; the caller specifies the working project per call.
 ```jsonc
 {
   "mcpServers": {
-    "flutter-generator": {
+    "scaffolder": {
       "command": "dart",
       "args": [
         "run",
         // generator install location — server reads templates from here.
-        "/opt/flutter-generator/mcp/bin/main.dart"
+        "/opt/scaffolder/mcp/bin/main.dart"
       ],
       "env": {
         // OPTIONAL: a default working project. The agent can override

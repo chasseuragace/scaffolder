@@ -62,7 +62,7 @@ class FlutterGeneratorMCPServer {
   final Map<String, MCPTool> _tools = {};
 
   Future<void> start() async {
-    stderr.writeln('flutter-generator-mcp v$version');
+    stderr.writeln('scaffolder-mcp v$version');
     stderr.writeln('  generator_root:      $generatorRoot   (auto-detected)');
     stderr.writeln('  default_working_root: $defaultWorkingRoot');
     stderr.writeln('  default_package:     $packageName');

@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:flutter_feature_generator/renderer.dart';
+import 'package:scaffolder/renderer.dart';
 
 void main() {
   group('substitutions', () {

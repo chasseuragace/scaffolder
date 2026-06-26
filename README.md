@@ -1,4 +1,4 @@
-# Flutter Feature Generator
+# Scaffolder
 
 An opinionated code generator that scaffolds production-shape Flutter
 features (Clean Architecture + Riverpod + tests) and wires them into the

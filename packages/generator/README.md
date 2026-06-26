@@ -1,24 +1,25 @@
-# tool/
+# scaffolder (engine)
 
-Generator implementation. See `../USAGE.md` for usage.
+The framework-agnostic generator engine (Dart package `scaffolder`). See
+`../../USAGE.md` for usage.
 
 ## Layout
 
 ```
-tool/
+packages/generator/
 ├── bin/generate.dart         # CLI entry point
-└── src/
+└── lib/
     ├── case_helpers.dart     # tokenize + Pascal/camel/snake/upper/kebab conversions
     ├── schema.dart           # parses templates/schema.yaml (flag definitions + conflicts)
     ├── preset.dart           # parses templates/presets/*.yaml
     ├── manifest.dart         # parses templates/manifest.yaml (file groups)
     ├── renderer.dart         # mustache substitution + line-marker conditionals
-    ├── registry_writer.dart  # idempotent edits to feature_registry.dart
+    ├── registry_writer.dart  # idempotent edits to the feature registry
     └── generator.dart        # orchestrates schema -> preset -> manifest -> render -> write
 ```
 
-The generator has zero Flutter dependencies; it is plain Dart that reads
-yaml. Tests live in `../test/tool/`.
+The engine has zero Flutter (or React) dependencies; it is plain Dart that
+reads yaml. Tests live in `../test/`.
 
 ## Multi-Framework Support
 
@@ -50,7 +51,7 @@ See `REACT_PORT_SUMMARY.md` for detailed porting learnings and framework-agnosti
    placeholders and `// #if features.X` markers as needed.
 2. Add an entry to `templates/manifest.yaml` under `core` (one-shot) or
    `feature` (per-feature). Set `when: <flag>` to gate it.
-3. Run `dart run tool/bin/generate.dart <Module> --overwrite` to verify.
+3. Run `dart run bin/generate.dart <Module> --overwrite` to verify.
 
 For React, create in `templates_react/` with `.ts.tmpl` or `.tsx.tmpl` extensions.
 

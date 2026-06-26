@@ -33,7 +33,7 @@ void main() {
     final r = await client.send('initialize', {});
     expect(r['result'], isA<Map>());
     expect(r['result']['protocolVersion'], '2024-11-05');
-    expect(r['result']['serverInfo']['name'], 'flutter-generator-mcp');
+    expect(r['result']['serverInfo']['name'], 'scaffolder-mcp');
     expect(r['result']['serverInfo']['version'], isA<String>());
   });
 

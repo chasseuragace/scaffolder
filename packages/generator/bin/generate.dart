@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_feature_generator/generator.dart';
+import 'package:scaffolder/generator.dart';
 
 const _usage = '''
 Flutter feature generator.

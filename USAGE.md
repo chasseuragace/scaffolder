@@ -1,8 +1,10 @@
-# Flutter Feature Generator
+# Scaffolder
 
-A small, opinionated code generator that scaffolds a Clean-Architecture
-Flutter feature (domain → data → presentation) and wires it into the app
-shell automatically. Built around a flag-gated template system; output is
+A small, opinionated, framework-agnostic code generator that scaffolds a
+Clean-Architecture feature (domain → data → presentation) and wires it into
+the app shell automatically. Built around a flag-gated template system; the
+target framework is a templates-directory swap (`templates/` for Flutter,
+`templates_react/` for React). The examples below use Flutter; output is
 guaranteed to pass `flutter analyze` and `flutter test`.
 
 ## What you get per feature

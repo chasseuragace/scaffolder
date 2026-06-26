@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import 'package:flutter_generator_mcp/base/path_safety.dart';
-import 'package:flutter_generator_mcp/base/tool.dart';
+import 'package:scaffolder_mcp/base/path_safety.dart';
+import 'package:scaffolder_mcp/base/tool.dart';
 
 void main() {
   late Directory tmp;

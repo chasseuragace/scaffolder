@@ -1,5 +1,5 @@
-name: flutter_generator_mcp
-description: MCP server wrapping the Flutter feature generator for AI IDEs.
+name: scaffolder_mcp
+description: MCP server wrapping the scaffolder (framework-agnostic feature generator) for AI IDEs.
 version: 1.0.0
 publish_to: none
 
@@ -16,4 +16,4 @@ dev_dependencies:
   test: ^1.25.15
 
 executables:
-  flutter-generator-mcp: main
+  scaffolder-mcp: main

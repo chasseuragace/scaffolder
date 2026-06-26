@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:flutter_feature_generator/case_helpers.dart';
+import 'package:scaffolder/case_helpers.dart';
 
 void main() {
   group('tokenize', () {

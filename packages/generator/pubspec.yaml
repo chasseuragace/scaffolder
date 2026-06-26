@@ -1,6 +1,6 @@
-name: flutter_feature_generator
+name: scaffolder
 description: >-
-  Opinionated code generator for Flutter Clean-Architecture features.
+  Opinionated, framework-agnostic code generator for Clean-Architecture features (Flutter, React, ...).
   Pure Dart — no Flutter runtime dependency. Templates live under templates/
   and are rendered with mustache-style placeholders + line-marker conditionals.
 version: 1.0.0

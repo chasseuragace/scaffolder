@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import 'package:flutter_feature_generator/generator.dart';
+import 'package:scaffolder/generator.dart';
 
 /// End-to-end: copy the project's templates into a scratch dir, generate
 /// core + a feature into it, and assert the expected file shape exists.

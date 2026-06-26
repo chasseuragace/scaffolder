@@ -1,7 +1,7 @@
-name: flutter_feature_generator_workspace
+name: scaffolder_workspace
 publish_to: none
 description: >-
-  Workspace root for the Flutter feature generator dev tools.
+  Workspace root for the scaffolder dev tools.
 
   The workspace contains the pure-Dart packages only — the engine and the
   MCP wrapper. The example Flutter app (packages/example_app/) is a
