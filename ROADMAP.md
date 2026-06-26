@@ -42,11 +42,14 @@ business logic.
 | Testing | Generated repository tests against the in-memory fake; generator self-tests for case helpers, renderer, registry writer, end-to-end |
 | Presets | `simple`, `standard`, `enterprise` |
 | CLI | `--preset`, `--feature flag=bool`, `--core-only`, `--overwrite`, `--templates`, `--root`, `--package` |
+| MCP server | `packages/generator_mcp/` exposes the engine to AI agents: `get_schema`, `get_presets`, `get_manifest`, `list_features`, `generate_feature` (with `dry_run`), `validate`. All schema/preset/manifest tools are `templates`-aware (Flutter or React). Path-confined via `ALLOWED_ROOT`. |
 
 **Quality gates**: `flutter analyze` clean; `flutter test` 35/35 green; three
 coexisting features (User, Order, UserProfile) generated and verified.
-React example app: `tsc -b` clean; vitest tests green; Product feature generated
-and verified.
+React example app: `tsc -b` clean; vitest tests green; multiple features
+generated and verified end-to-end (incl. self-wiring providers + templatized
+shell). MCP server: integration tests green. CI (`.github/workflows/ci.yml`)
+runs the generator + both example apps on every push.
 
 ---
 
@@ -58,21 +61,21 @@ not a v1 change.
 ### 1. Engine is framework-agnostic
 
 ```
-                ┌─────────────────────────────────────────┐
-                │  ENGINE (tool/src/, framework-agnostic) │
-                │                                         │
-                │   case_helpers   schema   preset        │
-                │   manifest       renderer registry      │
-                │   generator      bin/generate.dart      │
-                └────────────────────┬────────────────────┘
-                                     │
-                ┌────────────────────┼────────────────────┐
-                │                    │                    │
-                ▼                    ▼                    ▼
-   ┌────────────────┐   ┌────────────────┐   ┌────────────────┐
-   │   templates/   │   │ templates_react/│  │ templates_node/│
-   │  (Flutter, v1) │   │   (future)      │  │   (future)     │
-   └────────────────┘   └────────────────┘   └────────────────┘
+         ┌────────────────────────────────────────────────────┐
+         │  ENGINE (packages/generator/lib/, framework-agnostic) │
+         │                                                    │
+         │   case_helpers   schema   preset                   │
+         │   manifest       renderer registry                 │
+         │   generator      bin/generate.dart                 │
+         └─────────────────────────┬──────────────────────────┘
+                                   │
+                ┌──────────────────┼──────────────────┐
+                │                  │                  │
+                ▼                  ▼                  ▼
+   ┌────────────────┐   ┌─────────────────┐   ┌────────────────┐
+   │   templates/   │   │ templates_react/│   │ templates_node/│
+   │  (Flutter, v1) │   │  (shipped) ✅   │   │   (future)     │
+   └────────────────┘   └─────────────────┘   └────────────────┘
 ```
 
 The engine knows nothing about Dart, Flutter, or Riverpod. It loads
@@ -213,14 +216,14 @@ other framework) is a templates-and-conventions exercise, not a code rewrite.
 
 | Engine module | What it does |
 |---|---|
-| `tool/src/case_helpers.dart` | Tokenize + Pascal/camel/snake/upper/kebab |
-| `tool/src/schema.dart` | Parse flag definitions and conflict rules |
-| `tool/src/preset.dart` | Parse preset YAML files |
-| `tool/src/manifest.dart` | Parse template → output mappings, gating fields |
-| `tool/src/renderer.dart` | `{{placeholder}}` substitution + `// #if` line markers |
-| `tool/src/registry_writer.dart` | Idempotent edits inside `// GENERATED` markers |
-| `tool/src/generator.dart` | Orchestrate schema → preset → manifest → render → write |
-| `tool/bin/generate.dart` | CLI |
+| `packages/generator/lib/case_helpers.dart` | Tokenize + Pascal/camel/snake/upper/kebab |
+| `packages/generator/lib/schema.dart` | Parse flag definitions and conflict rules |
+| `packages/generator/lib/preset.dart` | Parse preset YAML files |
+| `packages/generator/lib/manifest.dart` | Parse template → output mappings, gating fields |
+| `packages/generator/lib/renderer.dart` | `{{placeholder}}` substitution + `// #if` line markers |
+| `packages/generator/lib/registry_writer.dart` | Idempotent edits inside `// GENERATED` markers |
+| `packages/generator/lib/generator.dart` | Orchestrate schema → preset → manifest → render → write |
+| `packages/generator/bin/generate.dart` | CLI |
 
 Zero of these reference Dart, Flutter, Riverpod, or any framework concept.
 They are text-and-files all the way down.
@@ -280,7 +283,7 @@ templates_react/
     └── module.ts.tmpl
 ```
 
-Run as: `dart run tool/bin/generate.dart User --templates templates_react`.
+Run as: `dart run packages/generator/bin/generate.dart User --templates templates_react`.
 The engine doesn't change.
 
 State management equivalents that map cleanly:
@@ -308,6 +311,42 @@ For Python/Ruby/YAML templates, parameterise the comment prefix per
 template directory (e.g. read it from `schema.yaml`'s metadata: `comment: "#"`).
 This is roughly 30 lines of code and fully covered by existing
 `renderer_test.dart` patterns.
+
+---
+
+## AI-driven generation (MCP server)
+
+Not in the original v1 plan, but shipped: `packages/generator_mcp/` is a
+Model Context Protocol server that exposes the same engine to AI coding agents
+(Claude Code, Cursor, etc.). It is a **delivery surface, not a new engine** —
+it shells out to the same `packages/generator/bin/generate.dart` and reads the
+same schema/manifest/preset files, so the CLI and MCP can never diverge in
+behaviour.
+
+| Tool | Purpose |
+|---|---|
+| `get_schema` | Flag definitions + conflict rules (agent never invents a flag) |
+| `get_presets` | Preset bundles and the flags each sets |
+| `get_manifest` | Template → output map (predict the file shape) |
+| `list_features` | Features already present in the working project |
+| `generate_feature` | Scaffold (supports `dry_run` for preview) |
+| `validate` | Post-generation sanity check |
+
+Design invariants:
+
+- **Templates-aware inspection.** `get_schema` / `get_presets` / `get_manifest`
+  take a `templates` arg (default `"templates"`; `"templates_react"` for React),
+  so inspection matches generation. The generator install location is
+  auto-detected; the caller only ever specifies the *working* project.
+- **Path-confined.** Writes are validated against `ALLOWED_ROOT` (when set) and
+  must land in a `pubspec.yaml`/`package.json`-bearing directory. The feature
+  registry is always preserved.
+- **Structured JSON, not raw YAML.** Every read tool returns parsed JSON so the
+  agent can reason without YAML-parsing or hallucinating shapes.
+
+This makes the scaffolder usable from a chat-driven loop — the medium-term
+"spec → full stack" story (below) lands here too: an agent can read the schema,
+preview with `dry_run`, generate, then verify.
 
 ---
 
@@ -341,7 +380,7 @@ The integration story:
 **Concrete v2 surface**:
 
 ```bash
-dart run tool/bin/generate.dart User \
+dart run packages/generator/bin/generate.dart User \
   --openapi-package my_api_client \
   --openapi-tag users
 ```
@@ -425,10 +464,9 @@ and makes it easy to spot the next priority.
     scaffolds, it doesn't compile).
 17. **No batch mode.** One feature per invocation. A `--from-manifest
     features.yaml` mode that scaffolds a list at once is not yet shipped.
-18. **No CI workflow shipped.** A `.github/workflows/test.yml` that runs
-    `flutter analyze && flutter test` and re-validates the generator's
-    output on every PR is missing — easy to add when the project moves
-    to GitHub.
+18. ~~**No CI workflow shipped.**~~ ✅ Resolved — `.github/workflows/ci.yml`
+    runs the generator self-tests and re-validates both example apps
+    (Flutter + React) on every push.
 
 ### Production polish gaps
 
@@ -492,8 +530,8 @@ The shortest path to making the generator do something new:
 3. **Add a manifest entry** in `templates/manifest.yaml` mapping the
    template to its output path. Use `when:` to gate, `once:` for one-shot,
    `preserve:` if you mutate the file idempotently elsewhere.
-4. **Run** `dart run tool/bin/generate.dart Sample --overwrite` and verify `flutter analyze && flutter test` stay green.
-5. **Add tests** to `test/tool/` for any non-trivial generator behaviour
+4. **Run** `dart run packages/generator/bin/generate.dart Sample --overwrite` and verify `flutter analyze && flutter test` stay green.
+5. **Add tests** to `packages/generator/test/` for any non-trivial generator behaviour
    the new template depends on.
 
 That's the whole loop.
